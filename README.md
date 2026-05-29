@@ -48,17 +48,56 @@ to extend this gallery.
 datamapper-webapp/
 ├── app.py                   Flask backend (static SPA + sandboxed file API)
 ├── requirements.txt
+├── Dockerfile               Multi-stage build (node builder → python runtime)
+├── .dockerignore
 ├── sample/                  Demo JSON Schema + XSD + input JSON
 ├── workspace/               Sandboxed file storage exposed by /api/files
 ├── scripts/
-│   ├── setup_kaoto.py       Cross-platform: clone + build Kaoto Online
+│   ├── setup_kaoto.py       Cross-platform: clone + patch + build Kaoto Online
+│   ├── kaoto.patch          The 6-file patch baking "Data eXchange Mapper" branding
 │   ├── run_app.py           Cross-platform: launch Flask serving the build
+│   ├── docker_build.py      Wrapper around `docker build`
+│   ├── docker_run.py        Wrapper around `docker run`
 │   └── setup-kaoto.ps1      Legacy PowerShell version (Windows only)
 └── .kaoto-src/              (created by the script) Kaoto monorepo
     └── packages/ui/dist/    The built static Kaoto Online app
 ```
 
-## Quickstart
+## Quickstart with Docker (recommended)
+
+> Works anywhere Docker / Podman runs (Linux, macOS, Windows + WSL2).
+> Only Python 3 + Docker on `PATH` are required — no Node, no yarn,
+> no Python venv.
+
+```bash
+cd datamapper-webapp
+
+# Build the image (clones Kaoto, applies scripts/kaoto.patch,
+# yarn build, then assembles the slim Flask runtime). ~10–15 min.
+python3 scripts/docker_build.py
+
+# Run it.
+python3 scripts/docker_run.py            # foreground, port 5000
+python3 scripts/docker_run.py --port 8080 --detach
+python3 scripts/docker_run.py --workspace ./workspace   # mount host dir
+```
+
+Open <http://localhost:5000>.
+
+The image is multi-stage: a `node:20` builder produces the SPA, and a
+`python:3.12-slim` runtime serves it via `gunicorn`. Final image runs
+as a non-root `app` user.
+
+Useful flags:
+
+```bash
+python3 scripts/docker_build.py --kaoto-ref 2.10.0
+python3 scripts/docker_build.py --tag dxm:dev --no-cache
+python3 scripts/docker_build.py --engine podman
+python3 scripts/docker_run.py   --tag dxm:dev --port 8080
+```
+
+## Quickstart (no Docker)
 
 > Works on **Windows, macOS, and Linux**. All commands below run
 > through Python so you don't need PowerShell on non-Windows.

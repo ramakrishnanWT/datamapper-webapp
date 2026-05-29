@@ -10,6 +10,12 @@ This document tracks the customizations layered on top of upstream
 > [Persisting the customizations](#persisting-the-customizations)
 > below for options.
 
+> **Update:** Option A below has been **implemented**. The diff is
+> committed at [`scripts/kaoto.patch`](scripts/kaoto.patch) and is
+> reapplied automatically by both `scripts/setup_kaoto.py` and the
+> `Dockerfile`. So a fresh `--clean` re-clone (or a `docker build`)
+> rebrands Kaoto end-to-end without manual editing.
+
 ## How the Kaoto DataMapper gets into the running app
 
 ```
@@ -117,9 +123,37 @@ upstream.
 Cons: maintaining a fork is more work; need to keep
 `--repo` / `--ref` pinned in docs.
 
-## Current state (May 29, 2026)
+## Current state
 
-- Upstream Kaoto: `main` branch (no pinned tag yet).
-- Patches: live only in the local `.kaoto-src/`; **not** committed.
-  Recommended next step: capture `scripts/kaoto.patch` and wire it into
-  `setup_kaoto.py`.
+- Upstream Kaoto: `main` branch (configurable via `--ref` /
+  `--kaoto-ref`).
+- Patches: captured in [`scripts/kaoto.patch`](scripts/kaoto.patch)
+  (~7 KB, 6 files) and applied automatically by:
+  - `scripts/setup_kaoto.py` (after clone, before `yarn install`)
+  - `Dockerfile` stage 1 (after `git clone`, before `yarn install`)
+- `setup_kaoto.py` is idempotent: if `index.html` already shows
+  "Data eXchange Mapper", the patch step is skipped.
+- A fresh `--clean` rebuild or a `docker build --no-cache` reproduces
+  the branded UI from scratch.
+
+## Docker workflow
+
+The repo ships a multi-stage `Dockerfile`:
+
+1. **Stage `kaoto-builder`** — `node:20-bookworm-slim`. Clones Kaoto
+   at `KAOTO_REF` (build-arg, default `main`), copies in
+   `scripts/kaoto.patch`, runs `git apply`, then
+   `corepack yarn install` + `corepack yarn workspace @kaoto/kaoto build`
+   with the two `VITE_*` env vars set.
+2. **Stage `runtime`** — `python:3.12-slim-bookworm`. Installs Flask
+   + gunicorn, copies `app.py`, `sample/`, and the built SPA from
+   stage 1. Runs as non-root user `app` and serves via gunicorn on
+   port 5000.
+
+Helpers:
+
+- `python3 scripts/docker_build.py` — wraps `docker build`. Forwards
+  `--kaoto-ref`, `--tag`, `--no-cache`, `--platform`, `--engine`.
+- `python3 scripts/docker_run.py` — wraps `docker run`. Supports
+  `--port`, `--detach`, `--workspace` (host mount → `/app/workspace`),
+  and `--engine docker|podman`.

@@ -1,0 +1,165 @@
+diff --git a/packages/ui/index.html b/packages/ui/index.html
+index e4c8ea0..90353c8 100644
+--- a/packages/ui/index.html
++++ b/packages/ui/index.html
+@@ -4,7 +4,7 @@
+     <meta charset="UTF-8" />
+     <link rel="icon" type="image/icon" href="/favicon.ico" />
+     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+-    <title>Kaoto</title>
++    <title>Data eXchange Mapper</title>
+   </head>
+   <body>
+     <script type="module">
+diff --git a/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx b/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
+index 6353b96..0463981 100644
+--- a/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
++++ b/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
+@@ -13,7 +13,7 @@ export const MainMenuToolbarItem: FunctionComponent = () => {
+       <Dropdown
+         toggle={(toggleRef) => (
+           <MenuToggle ref={toggleRef} id="main-menu-toggle" data-testid="dm-debug-main-menu-button" onClick={onToggle}>
+-            DataMapper Debugger
++            DataMapper - UI
+           </MenuToggle>
+         )}
+         isOpen={isOpen}
+diff --git a/packages/ui/src/components/DataMapper/debug/ToggleDebugToolbarItem.tsx b/packages/ui/src/components/DataMapper/debug/ToggleDebugToolbarItem.tsx
+index 7d1b8f4..d630f11 100644
+--- a/packages/ui/src/components/DataMapper/debug/ToggleDebugToolbarItem.tsx
++++ b/packages/ui/src/components/DataMapper/debug/ToggleDebugToolbarItem.tsx
+@@ -1,5 +1,5 @@
+ import { ToggleGroup, ToggleGroupItem, ToolbarItem } from '@patternfly/react-core';
+-import { BugIcon } from '@patternfly/react-icons';
++import { CogIcon } from '@patternfly/react-icons';
+ import { FunctionComponent } from 'react';
+ 
+ import { useDataMapper } from '../../../hooks/useDataMapper';
+@@ -11,8 +11,9 @@ export const ToggleDebugToolbarItem: FunctionComponent = () => {
+     <ToolbarItem>
+       <ToggleGroup>
+         <ToggleGroupItem
+-          icon={<BugIcon />}
+-          aria-label="Enable debug mode"
++          icon={<CogIcon />}
++          aria-label="Actions"
++          title="Actions"
+           buttonId="enable-debug-mode"
+           data-testid="enable-debug-mode-btn"
+           isSelected={debug}
+diff --git a/packages/ui/src/layout/Shell.tsx b/packages/ui/src/layout/Shell.tsx
+index ec74c86..8e32ec1 100644
+--- a/packages/ui/src/layout/Shell.tsx
++++ b/packages/ui/src/layout/Shell.tsx
+@@ -8,6 +8,8 @@ import { LocalStorageKeys } from '../models';
+ import { Navigation } from './Navigation';
+ import { TopBar } from './TopBar';
+ 
++const DATAMAPPER_ONLY = import.meta.env.VITE_DATAMAPPER_ONLY === 'true';
++
+ export const Shell: FunctionComponent<PropsWithChildren> = (props) => {
+   const defaultNavState = useMemo(() => {
+     if (globalThis.window !== undefined) {
+@@ -23,6 +25,16 @@ export const Shell: FunctionComponent<PropsWithChildren> = (props) => {
+     setIsNavOpen(!isNavOpen);
+   }, [isNavOpen, setIsNavOpen]);
+ 
++  if (DATAMAPPER_ONLY) {
++    return (
++      <Page isContentFilled masthead={<TopBar navToggle={navToggle} hideNavToggle />}>
++        <PageSection isFilled hasBodyWrapper={false} className="shell__page-section">
++          {props.children}
++        </PageSection>
++      </Page>
++    );
++  }
++
+   return (
+     <Page isContentFilled masthead={<TopBar navToggle={navToggle} />} sidebar={<Navigation isNavOpen={isNavOpen} />}>
+       <PageSection isFilled hasBodyWrapper={false} className="shell__page-section">
+diff --git a/packages/ui/src/layout/TopBar.tsx b/packages/ui/src/layout/TopBar.tsx
+index 265c9fb..d1cd5bf 100644
+--- a/packages/ui/src/layout/TopBar.tsx
++++ b/packages/ui/src/layout/TopBar.tsx
+@@ -23,7 +23,6 @@ import React, { FunctionComponent } from 'react';
+ import { Link } from 'react-router-dom';
+ 
+ import camelLogo from '../assets/camel-logo.svg';
+-import logo from '../assets/logo-kaoto.png';
+ import { useComponentLink } from '../hooks/ComponentLink';
+ import { DEFAULT_POPPER_PROPS } from '../models/popper-default';
+ import { Links } from '../router/links.models';
+@@ -31,6 +30,7 @@ import { KaotoAboutModal } from './KaotoAboutModal';
+ 
+ interface ITopBar {
+   navToggle: () => void;
++  hideNavToggle?: boolean;
+ }
+ 
+ const displayObject: MastheadProps['display'] = {
+@@ -59,12 +59,16 @@ export const TopBar: FunctionComponent<ITopBar> = (props) => {
+     <>
+       <Masthead id="stack-inline-masthead" display={displayObject}>
+         <MastheadMain>
+-          <MastheadToggle>
+-            <Button icon={<BarsIcon />} variant="plain" onClick={props.navToggle} aria-label="Global navigation" />
+-          </MastheadToggle>
++          {!props.hideNavToggle && (
++            <MastheadToggle>
++              <Button icon={<BarsIcon />} variant="plain" onClick={props.navToggle} aria-label="Global navigation" />
++            </MastheadToggle>
++          )}
+           <MastheadBrand data-codemods>
+             <MastheadLogo data-codemods component={logoLink} className="masthead-logo">
+-              <img className="shell__logo" src={logo} alt="Kaoto Logo" />
++              <span className="shell__logo-text" style={{ fontWeight: 600, fontSize: '1.1rem', color: 'var(--pf-v6-global--Color--100, #151515)' }}>
++                Data eXchange Mapper
++              </span>
+             </MastheadLogo>
+           </MastheadBrand>
+         </MastheadMain>
+diff --git a/packages/ui/src/router.tsx b/packages/ui/src/router.tsx
+index 776fd28..f2e577d 100644
+--- a/packages/ui/src/router.tsx
++++ b/packages/ui/src/router.tsx
+@@ -5,6 +5,16 @@ import { ErrorPage } from './pages/ErrorPage';
+ import { ReloadProvider } from './providers';
+ import { Links } from './router/links.models';
+ 
++const DATAMAPPER_ONLY = import.meta.env.VITE_DATAMAPPER_ONLY === 'true';
++
++const dataMapperDebuggerLazy = async () => {
++  if (import.meta.env.VITE_ENABLE_DATAMAPPER_DEBUGGER === 'true' || DATAMAPPER_ONLY) {
++    return import('./components/DataMapper/debug/page');
++  } else {
++    return import('./pages/DataMapperNotYetInBrowser');
++  }
++};
++
+ export const router = createHashRouter([
+   {
+     path: Links.Home,
+@@ -17,7 +27,7 @@ export const router = createHashRouter([
+     children: [
+       {
+         index: true,
+-        lazy: async () => import('./pages/Design'),
++        lazy: DATAMAPPER_ONLY ? dataMapperDebuggerLazy : async () => import('./pages/Design'),
+       },
+       {
+         path: Links.SourceCode,
+@@ -53,13 +63,7 @@ export const router = createHashRouter([
+       },
+       {
+         path: Links.DataMapper,
+-        lazy: async () => {
+-          if (import.meta.env.VITE_ENABLE_DATAMAPPER_DEBUGGER === 'true') {
+-            return import('./components/DataMapper/debug/page');
+-          } else {
+-            return import('./pages/DataMapperNotYetInBrowser');
+-          }
+-        },
++        lazy: dataMapperDebuggerLazy,
+       },
+       {
+         path: `${Links.DataMapper}/:id`,

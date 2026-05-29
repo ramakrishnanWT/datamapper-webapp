@@ -31,6 +31,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_KAOTO_REPO = os.environ.get("KAOTO_REPO", "https://github.com/KaotoIO/kaoto")
 DEFAULT_KAOTO_SRC = Path(os.environ.get("KAOTO_SRC", REPO_ROOT / ".kaoto-src"))
+KAOTO_PATCH = Path(__file__).resolve().parent / "kaoto.patch"
 
 # Build-time Vite flags baked into the Kaoto bundle.
 BUILD_ENV = {
@@ -82,6 +83,19 @@ def clone_or_update(kaoto_src: Path, ref: str, repo_url: str) -> None:
     )
 
 
+def apply_patch(kaoto_src: Path, patch: Path) -> None:
+    if not patch.exists():
+        print(f"  (no patch file at {patch}; skipping)")
+        return
+    # Detect already-applied patch by checking the title-string we change.
+    index_html = kaoto_src / "packages" / "ui" / "index.html"
+    if index_html.exists() and "Data eXchange Mapper" in index_html.read_text(encoding="utf-8"):
+        banner("Kaoto patch already applied; skipping")
+        return
+    banner(f"Applying {patch.name}")
+    run(["git", "apply", "--whitespace=nowarn", str(patch)], cwd=kaoto_src)
+
+
 def yarn_install(kaoto_src: Path) -> None:
     banner("yarn install (this takes a while — 1800+ packages)")
     run(["corepack", "yarn", "install"], cwd=kaoto_src)
@@ -105,6 +119,7 @@ def main() -> int:
     parser.add_argument("--kaoto-src", default=str(DEFAULT_KAOTO_SRC), help="Where to clone Kaoto")
     parser.add_argument("--skip-install", action="store_true", help="Skip yarn install (just rebuild)")
     parser.add_argument("--skip-build", action="store_true", help="Skip yarn build")
+    parser.add_argument("--skip-patch", action="store_true", help="Skip applying scripts/kaoto.patch")
     parser.add_argument("--clean", action="store_true", help="Delete .kaoto-src before cloning")
     args = parser.parse_args()
 
@@ -116,6 +131,9 @@ def main() -> int:
 
     ensure_yarn()
     clone_or_update(kaoto_src, args.ref, args.repo)
+
+    if not args.skip_patch:
+        apply_patch(kaoto_src, KAOTO_PATCH)
 
     if not args.skip_install:
         yarn_install(kaoto_src)

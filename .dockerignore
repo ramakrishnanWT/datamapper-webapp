@@ -1,0 +1,29 @@
+# Build artifacts / caches that should never enter the build context.
+.kaoto-src/
+.venv/
+venv/
+__pycache__/
+*.pyc
+node_modules/
+
+# Local data
+workspace/*
+!workspace/.gitkeep
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Git
+.git/
+.gitignore
+.github/
+
+# Docker assets — not needed inside image
+Dockerfile
+.dockerignore
