@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/order-input.schema.json",
+  "title": "Order",
+  "description": "Inbound order payload consumed by the JSON-to-XML DataMapper route.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["orderId", "customer", "items", "shippingAddress"],
+  "properties": {
+    "orderId": {
+      "type": "string",
+      "description": "Unique order identifier.",
+      "minLength": 1,
+      "examples": ["ORD-1001"]
+    },
+    "customer": {
+      "type": "object",
+      "description": "Customer placing the order.",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Customer identifier.",
+          "minLength": 1,
+          "examples": ["CUST-42"]
+        },
+        "name": {
+          "type": "string",
+          "description": "Customer full name.",
+          "minLength": 1,
+          "examples": ["Jane Doe"]
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "description": "Ordered line items (at least one).",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sku", "quantity", "price"],
+        "properties": {
+          "sku": {
+            "type": "string",
+            "description": "Stock-keeping unit.",
+            "minLength": 1,
+            "examples": ["SKU-100"]
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Number of units ordered.",
+            "minimum": 1,
+            "examples": [2]
+          },
+          "price": {
+            "type": "number",
+            "description": "Unit price in the order currency.",
+            "minimum": 0,
+            "examples": [19.99]
+          }
+        }
+      }
+    },
+    "shippingAddress": {
+      "type": "object",
+      "description": "Destination address for the order.",
+      "additionalProperties": false,
+      "required": ["city", "country"],
+      "properties": {
+        "city": {
+          "type": "string",
+          "description": "Destination city.",
+          "minLength": 1,
+          "examples": ["Seattle"]
+        },
+        "country": {
+          "type": "string",
+          "description": "ISO 3166-1 alpha-2 country code.",
+          "pattern": "^[A-Z]{2}$",
+          "examples": ["US"]
+        }
+      }
+    }
+  }
+}

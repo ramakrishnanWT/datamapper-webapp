@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified"
+           attributeFormDefault="unqualified">
+
+    <xs:annotation>
+        <xs:documentation>
+            Outbound Order XML schema produced by the JSON-to-XML DataMapper route.
+            Use this XSD as the TARGET schema in Kaoto DataMapper.
+        </xs:documentation>
+    </xs:annotation>
+
+    <!-- ===================== Root element ===================== -->
+    <xs:element name="Order" type="OrderType"/>
+
+    <!-- ===================== Complex types ===================== -->
+    <xs:complexType name="OrderType">
+        <xs:sequence>
+            <xs:element name="OrderId"         type="NonEmptyString"/>
+            <xs:element name="Customer"        type="CustomerType"/>
+            <xs:element name="Items"           type="ItemsType"/>
+            <xs:element name="ShippingAddress" type="AddressType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="CustomerType">
+        <xs:sequence>
+            <xs:element name="CustomerId" type="NonEmptyString"/>
+            <xs:element name="Name"       type="NonEmptyString"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ItemsType">
+        <xs:sequence>
+            <xs:element name="Item" type="ItemType" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ItemType">
+        <xs:sequence>
+            <xs:element name="Sku"      type="NonEmptyString"/>
+            <xs:element name="Quantity" type="PositiveInt"/>
+            <xs:element name="Price"    type="NonNegativeDecimal"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="AddressType">
+        <xs:sequence>
+            <xs:element name="City"    type="NonEmptyString"/>
+            <xs:element name="Country" type="CountryCode"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- ===================== Simple types ===================== -->
+    <xs:simpleType name="NonEmptyString">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="PositiveInt">
+        <xs:restriction base="xs:int">
+            <xs:minInclusive value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="NonNegativeDecimal">
+        <xs:restriction base="xs:decimal">
+            <xs:minInclusive value="0"/>
+            <xs:fractionDigits value="4"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="CountryCode">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[A-Z]{2}"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

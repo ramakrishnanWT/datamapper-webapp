@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Frontend
+frontend/dist/
+frontend/node_modules/
+frontend/.vite/
+
+# Sandbox workspace contents (the folder itself is created at runtime).
+# Keep the dir but ignore its contents.
+workspace/*
+!workspace/.gitkeep
+
+# Local Kaoto fork checkout
+.kaoto-src/
+
+# Build/setup logs
+*.log
+.kaoto-build.log
+.kaoto-setup.log
