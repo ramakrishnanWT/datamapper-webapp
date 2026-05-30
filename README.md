@@ -28,7 +28,12 @@ Data integration proof-of-concepts
 The public Kaoto deployments typically disable the DataMapper functionality. This project builds Kaoto from source and exposes the complete DataMapper experience, allowing teams to design, test, and maintain transformation mappings locally without additional infrastructure.
 
 
+## Keywords
 
+Data Mapping, Data Transformation, ETL Tool, ETL Designer,
+Visual Mapper, Apache Camel DataMapper, Kaoto DataMapper,
+JSON Transformation, XML Transformation, XSLT Generator,
+Schema Mapping, Data Integration Platform
 
 In short, this is a Flask-based web app that hosts the **real Kaoto Online UI** (built
 from source) so that the full Kaoto experience — Camel route designer
