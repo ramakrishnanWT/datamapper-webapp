@@ -6,7 +6,8 @@ This project enables developers, integration engineers, and data teams to visual
 
 # Key Features
 + Visual drag-and-drop data mapping
-+ JSON-to-XML and XML-to-JSON transformation workflows
++ XSLT 3.0 compaitble that supports JSON Schema as well (and hence JSON data can be transformed during runtime by the XSLT)
++ Generate XSLT visually for JSON-to-XML or XML-to-JSON or XML-to-XML or JSON-to-JSON transformation workflows
 + XSD and JSON Schema support
 + Browser-based ETL mapping designer
 + XSLT compatible for Apache Camel and Kaoto integration
