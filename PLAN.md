@@ -1,72 +1,45 @@
-# Implementation plan
+# Current plan
 
-Goal: render Kaoto's `<DataMapper />` React component inside our Flask-served
-SPA, with Flask as the backing store.
+Goal: package a reproducible Data eXchange Mapper web app by serving a
+patched Kaoto DataMapper build from Flask.
 
-## Status
+## Current status
 
-| Phase | Item | State |
-|---|---|---|
-| 1 | Flask backend with sandboxed file API (`/api/files/*`)             | ✅ done |
-| 1 | Sample bootstrap endpoints (`/api/samples`, `/api/samples/*/copy`) | ✅ done |
-| 1 | Vite + React + TS frontend scaffold                                | ✅ done |
-| 1 | `FlaskMetadataApi.ts` implementing the REST contract               | ✅ done (interface verified against Kaoto sources) |
-| 1 | Flask serves the built React app                                   | ✅ done |
-| 2 | Script: clone + patch + build Kaoto                                | ✅ scripted (`scripts/setup-kaoto.ps1`); needs first run |
-| 2 | Confirm Kaoto build succeeds end-to-end on Windows / Node 24       | ⏳ pending hardware run |
-| 2 | Mount `<DataMapper />` in `App.tsx` with `metadataApi` prop        | ⏳ pending — depends on phase-2 build output |
-| 2 | Verify `IMetadataApi` surface matches Kaoto's current TS contract  | ⚠ at risk — Kaoto refactors this interface; we may need to adjust `FlaskMetadataApi.ts` |
-| 2 | Import Kaoto's required PatternFly CSS in `main.tsx`               | ⏳ pending |
-| 3 | XSLT runner endpoint that executes generated `.xsl` against JSON   | not started |
-| 3 | Live "Test transform" panel in the UI                              | not started |
-| 3 | Auth + multi-user workspaces                                       | out of scope for the POC |
+| Area | State |
+| --- | --- |
+| Flask static host and health endpoint | Done |
+| Sandboxed `/api/files/*` workspace API | Done |
+| Sample listing and copy endpoints | Done |
+| Kaoto clone, patch, and build script | Done |
+| Docker multi-stage build and run helpers | Done |
+| Fast backend tests and CI workflow | Done |
+| Kaoto version pinning | Planned |
+| Patch drift check against the selected Kaoto ref | Planned |
+| File API auth and upload limits for shared deployments | Planned |
 
-## Known risks and unknowns
+## Architecture
 
-1. **`IMetadataApi` shape may drift.** Kaoto changes this interface
-   frequently (recent commits added `isResourceExist`, will add more).
-   Our `FlaskMetadataApi.ts` covers what's documented in the sources
-   today; expect to extend it. The TypeScript compiler will tell us
-   exactly which methods are missing the first time we import it.
+The repository does not maintain a separate React frontend scaffold. The
+frontend is the upstream Kaoto UI, cloned into `.kaoto-src/`, patched by
+`scripts/kaoto.patch`, and built into `.kaoto-src/packages/ui/dist/`.
+Flask serves that built directory through `FRONTEND_DIST`.
 
-2. **DataMapper has internal dependencies on Kaoto context providers.**
-   Looking at `DataMapper.tsx`, it expects to live inside a Kaoto
-   `RuntimeContext` / `EntitiesContext` / `SchemaBridgeProvider` etc.
-   We may have to mount a stub provider tree, not just `<DataMapper />`
-   in isolation. This is the highest-risk item.
+```text
+KaotoIO/kaoto
+  -> scripts/setup_kaoto.py clones and applies scripts/kaoto.patch
+  -> corepack yarn workspace @kaoto/kaoto build
+  -> .kaoto-src/packages/ui/dist
+  -> Flask app.py serves the static SPA and backend file API
+```
 
-3. **PatternFly + SCSS bundle.** Kaoto styles assume PatternFly is
-   already imported. We must `import '@patternfly/react-core/dist/styles/base.css'`
-   (or the bundle Kaoto ships) in `main.tsx`.
+## Near-term improvements
 
-4. **Maven for `@kaoto/camel-catalog`.** The `yarn install` triggers a
-   Maven build for the Camel catalog package. The setup script assumes
-   `mvn` is available; if not, set
-   `KAOTO_SKIP_CATALOG=true` and pre-download a release artifact.
-
-5. **Bundle size.** The built SPA will be on the order of 5–10 MB
-   gzipped. Acceptable for a POC; not for production.
-
-## Next concrete steps
-
-1. Run `pwsh scripts/setup-kaoto.ps1` and capture any failure (Yarn,
-   Maven, Node version, etc.). Fix as needed.
-2. After it finishes, in `frontend/src/App.tsx` try:
-   ```tsx
-   import { DataMapper } from "@kaoto/kaoto";
-   ```
-   The TS compiler / dev server will reveal:
-   * any missing peer providers (point 2 above),
-   * any missing `IMetadataApi` methods (point 1 above),
-   * required CSS imports (point 3 above).
-3. Iterate on `FlaskMetadataApi.ts` and `App.tsx` until the component
-   renders and a sample mapping can be saved to the workspace.
-4. Add Phase 3: an `/api/xslt-run` endpoint (Saxon via Java or
-   `lxml`-XSLT-1.0) that the UI can call to test the generated mapping.
-
-## Fallback if Phase 2 stalls
-
-The earlier custom Flask DataMapper (commit history of this folder) is
-functionally equivalent: source tree, target tree, drag-to-map, XSLT
-generation, JSON→XML test. It can be resurrected if upstream Kaoto
-proves too tightly coupled to its host application.
+1. Pin the default Kaoto ref in `scripts/setup_kaoto.py` and `Dockerfile`
+   to a known-good tag or commit SHA instead of tracking upstream `main`.
+2. Teach `scripts/setup_kaoto.py` to detect when an existing `.kaoto-src`
+   checkout does not match the requested `--repo` or `--ref`, then either
+   check out the requested ref or ask for `--clean`.
+3. Add a lightweight CI job that verifies `scripts/kaoto.patch` still
+   applies to the pinned Kaoto ref.
+4. Add token-based protection and request size limits before exposing the
+   file API beyond local development.

@@ -226,10 +226,23 @@ All paths resolve under `WORKSPACE_DIR` with path-traversal rejection.
 
 | Env var                            | Default            | Purpose                                              |
 | ---------------------------------- | ------------------ | ---------------------------------------------------- |
-| `FRONTEND_DIST`                    | `./frontend/dist`  | Static SPA root (point at Kaoto dist)                |
+| `FRONTEND_DIST`                    | `./.kaoto-src/packages/ui/dist` | Static SPA root containing the built Kaoto UI |
 | `WORKSPACE_DIR`                    | `./workspace`      | Where the file API stores data                       |
 | `FLASK_PORT`                       | `5000`             | Where Flask listens                                  |
 | `VITE_ENABLE_DATAMAPPER_DEBUGGER`  | (unset)            | **Build-time.** Set to `true` before `yarn build` to enable the standalone DataMapper page at `#/datamapper`. |
+
+## Development checks
+
+Install the runtime and test dependencies, then run the fast backend checks:
+
+```bash
+python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m py_compile app.py scripts/setup_kaoto.py scripts/run_app.py scripts/docker_build.py scripts/docker_run.py
+python -m pytest
+```
+
+The GitHub Actions workflow runs the same compile and pytest checks on
+pushes and pull requests.
 
 ## Updating to a newer Kaoto release
 
