@@ -5,23 +5,23 @@ A web-based data mapping, data transformation, and ETL design application built 
 This project enables developers, integration engineers, and data teams to visually map and transform data between JSON, XML, XSD, and other enterprise formats through a browser-based interface. Unlike the standard Kaoto Online deployment, this application exposes the full DataMapper experience, including schema-driven mapping, transformation design, and XSLT generation.
 
 # Key Features
-Visual drag-and-drop data mapping
-JSON-to-XML and XML-to-JSON transformation workflows
-XSD and JSON Schema support
-Browser-based ETL mapping designer
-Apache Camel and Kaoto integration
-Automatic XSLT generation
-Local execution with Docker or Flask
-Persistent browser-based workspace
++ Visual drag-and-drop data mapping
++ JSON-to-XML and XML-to-JSON transformation workflows
++ XSD and JSON Schema support
++ Browser-based ETL mapping designer
++ XSLT compatible for Apache Camel and Kaoto integration
++ Automatic XSLT generation
++ Local execution with Docker or Flask
++ Persistent browser-based workspace
 
 # Common Use Cases
-Enterprise data transformation
-ETL and ELT workflow design
-API payload mapping
-System migration projects
-JSON/XML schema conversion
-Apache Camel integration development
-Data integration proof-of-concepts
++ Enterprise data transformation
++ ETL and ELT workflow design
++ API payload mapping
++ System migration projects
++ JSON/XML schema conversion
++ Apache Camel integration development
++ Data integration proof-of-concepts
 
 # Why Use This Project?
 
@@ -30,10 +30,10 @@ The public Kaoto deployments typically disable the DataMapper functionality. Thi
 
 ## Keywords
 
-Data Mapping, Data Transformation, ETL Tool, ETL Designer,
-Visual Mapper, Apache Camel DataMapper, Kaoto DataMapper,
-JSON Transformation, XML Transformation, XSLT Generator,
-Schema Mapping, Data Integration Platform
++ Data Mapping, Data Transformation, ETL Tool, ETL Designer,
++ Visual Mapper, Apache Camel DataMapper, Kaoto DataMapper,
++ JSON Transformation, XML Transformation, XSLT Generator,
++ Schema Mapping, Data Integration Platform
 
 In short, this is a Flask-based web app that hosts the **real Kaoto Online UI** (built
 from source) so that the full Kaoto experience — Camel route designer
