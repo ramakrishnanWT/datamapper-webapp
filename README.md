@@ -1,6 +1,34 @@
 # DataMapper Web App
 
-A Flask-based web app that hosts the **real Kaoto Online UI** (built
+A web-based data mapping, data transformation, and ETL design application built on top of the Kaoto DataMapper engine.
+
+This project enables developers, integration engineers, and data teams to visually map and transform data between JSON, XML, XSD, and other enterprise formats through a browser-based interface. Unlike the standard Kaoto Online deployment, this application exposes the full DataMapper experience, including schema-driven mapping, transformation design, and XSLT generation.
+
+Key Features
+Visual drag-and-drop data mapping
+JSON-to-XML and XML-to-JSON transformation workflows
+XSD and JSON Schema support
+Browser-based ETL mapping designer
+Apache Camel and Kaoto integration
+Automatic XSLT generation
+Local execution with Docker or Flask
+Persistent browser-based workspace
+Common Use Cases
+Enterprise data transformation
+ETL and ELT workflow design
+API payload mapping
+System migration projects
+JSON/XML schema conversion
+Apache Camel integration development
+Data integration proof-of-concepts
+Why Use This Project?
+
+The public Kaoto deployments typically disable the DataMapper functionality. This project builds Kaoto from source and exposes the complete DataMapper experience, allowing teams to design, test, and maintain transformation mappings locally without additional infrastructure.
+
+
+
+
+In short, this is a Flask-based web app that hosts the **real Kaoto Online UI** (built
 from source) so that the full Kaoto experience — Camel route designer
 + embedded **DataMapper** — runs locally in any browser, served by
 Flask.
