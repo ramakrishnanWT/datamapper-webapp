@@ -41,7 +41,10 @@ BASE_DIR = Path(__file__).resolve().parent
 WORKSPACE_DIR = Path(os.environ.get("WORKSPACE_DIR", BASE_DIR / "workspace")).resolve()
 SAMPLE_DIR = (BASE_DIR / "sample").resolve()
 FRONTEND_DIST = Path(
-    os.environ.get("FRONTEND_DIST", BASE_DIR / "frontend" / "dist")
+    os.environ.get(
+        "FRONTEND_DIST",
+        BASE_DIR / ".kaoto-src" / "packages" / "ui" / "dist",
+    )
 ).resolve()
 FLASK_PORT = int(os.environ.get("FLASK_PORT", "5000"))
 
@@ -187,7 +190,7 @@ def index():
 
 @app.get("/<path:asset>")
 def static_assets(asset: str):
-    """Serve any file from frontend/dist, falling back to index.html for
+    """Serve any file from the built Kaoto dist, falling back to index.html for
     client-side routes (SPA behaviour)."""
     if not FRONTEND_DIST.exists():
         return _frontend_not_built_page()
@@ -209,9 +212,8 @@ def _frontend_not_built_page():
 pre{background:#1e1f22;color:#eee;padding:14px;border-radius:6px;overflow:auto}</style>
 <h1>Frontend not built yet</h1>
 <p>Run the setup + build steps:</p>
-<pre>cd frontend
-npm install
-npm run build</pre>
+<pre>python scripts/setup_kaoto.py
+python scripts/run_app.py</pre>
 <p>Then refresh this page. Backend API is up at
 <a href="/api/health">/api/health</a>.</p>""",
         200,
