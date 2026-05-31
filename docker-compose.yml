@@ -1,0 +1,51 @@
+  # Data eXchange Mapper — Docker Compose
+#
+# By default this builds from the GitHub repo
+# (https://github.com/ramakrishnanWT/datamapper-webapp), so you only need
+# this single docker-compose.yml file on your Linux box.
+#
+# Usage (remote — default; only this file needed, Docker clones the repo):
+#   docker compose up --build -d
+#
+#   Pin a branch / tag / commit:
+#     DXM_REF=v1.0.0 docker compose up --build
+#
+#   Use a fork:
+#     DXM_BUILD_CONTEXT=https://github.com/<owner>/datamapper-webapp.git#main \
+#         docker compose up --build
+#
+# Usage (local — when running from inside a cloned datamapper-webapp/ folder):
+#   DXM_BUILD_CONTEXT=. docker compose up --build
+#
+# Other overrides:
+#   DXM_PORT=8080 docker compose up           # change host port
+#   KAOTO_REF=v2.7.0 docker compose build --no-cache
+
+services:
+  dxm:
+    build:
+      context: ${DXM_BUILD_CONTEXT:-https://github.com/ramakrishnanWT/datamapper-webapp.git#${DXM_REF:-main}}
+      dockerfile: Dockerfile
+      args:
+        KAOTO_REPO: ${KAOTO_REPO:-https://github.com/KaotoIO/kaoto}
+        KAOTO_REF: ${KAOTO_REF:-main}
+    image: data-exchange-mapper:latest
+    container_name: dxm
+    ports:
+      - "${DXM_PORT:-8080}:5000"
+    environment:
+      FLASK_PORT: "5000"
+      FRONTEND_DIST: /app/dist
+      WORKSPACE_DIR: /app/workspace
+    volumes:
+      # Persist user workspace files outside the container.
+      # Only used when DXM_BUILD_CONTEXT is local (a remote Git context
+      # has no ./workspace on the host — create one or remove this line).
+      - ./workspace:/app/workspace
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:5000/', timeout=3).status==200 else 1)\""]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
