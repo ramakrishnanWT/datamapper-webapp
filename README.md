@@ -2,6 +2,11 @@
 
 A web-based data mapping, data transformation, and ETL design application built on top of the Kaoto DataMapper engine.
 
+> **Abbreviation:** **DXM** = **D**ata e**X**change **M**apper — used
+> throughout this repo as the project shorthand (container name `dxm`,
+> image `data-exchange-mapper:latest`, env vars `DXM_PORT`, `DXM_REF`,
+> `DXM_BUILD_CONTEXT`, etc.).
+
 This project enables developers, integration engineers, and data teams to visually map and transform data between JSON using JSON Schema and XML using its XSD through a browser-based interface. Unlike the standard Kaoto Online deployment, this application exposes the full DataMapper experience, including schema-driven mapping, transformation design, and XSLT generation.
 
 # Key Features
