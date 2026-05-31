@@ -2,7 +2,7 @@
 
 A web-based data mapping, data transformation, and ETL design application built on top of the Kaoto DataMapper engine.
 
-This project enables developers, integration engineers, and data teams to visually map and transform data between JSON, XML, XSD, and other enterprise formats through a browser-based interface. Unlike the standard Kaoto Online deployment, this application exposes the full DataMapper experience, including schema-driven mapping, transformation design, and XSLT generation.
+This project enables developers, integration engineers, and data teams to visually map and transform data between JSON using JSON Schema and XML using its XSD through a browser-based interface. Unlike the standard Kaoto Online deployment, this application exposes the full DataMapper experience, including schema-driven mapping, transformation design, and XSLT generation.
 
 # Key Features
 + Visual drag-and-drop data mapping
