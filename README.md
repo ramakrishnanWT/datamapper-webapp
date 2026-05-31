@@ -1,4 +1,4 @@
-# DataMapper Web App
+# DataMapper Web App (Kaoto DataMapper as Web application)
 
 A web-based data mapping, data transformation, and ETL design application built on top of the Kaoto DataMapper engine.
 
