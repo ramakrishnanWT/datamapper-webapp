@@ -90,6 +90,7 @@ datamapper-webapp/
 ├── app.py                   Flask backend (static SPA + sandboxed file API)
 ├── requirements.txt
 ├── Dockerfile               Multi-stage build (node builder → python runtime)
+├── docker-compose.yml       One-file deploy; clones the repo at build time
 ├── .dockerignore
 ├── sample/                  Demo JSON Schema + XSD + input JSON
 ├── workspace/               Sandboxed file storage exposed by /api/files
@@ -109,6 +110,55 @@ datamapper-webapp/
 > Works anywhere Docker / Podman runs (Linux, macOS, Windows + WSL2).
 > Only Python 3 + Docker on `PATH` are required — no Node, no yarn,
 > no Python venv.
+
+### Option A — Docker Compose (one file, one command)
+
+The fastest path on a fresh Linux/WSL host: drop
+[`docker-compose.yml`](docker-compose.yml) anywhere and run
+`docker compose up`. Compose will clone this repo + Kaoto, build the
+image, and start the container — you don't need a local checkout.
+
+```bash
+# Only docker-compose.yml needs to be present in the working dir.
+docker compose up --build -d
+
+# Then open the app:
+#   http://localhost:8080/
+```
+
+Manage the lifecycle:
+
+```bash
+docker compose logs -f dxm     # tail logs
+docker compose ps              # status + healthcheck
+docker compose down            # stop and remove (image is kept)
+docker compose up -d --build   # rebuild after a code change
+```
+
+Override defaults via environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DXM_PORT` | `8080` | Host port. Avoid `10080` — Chromium blocks it (`ERR_UNSAFE_PORT`). |
+| `DXM_REF` | `main` | Branch / tag / commit of this repo to build. |
+| `DXM_BUILD_CONTEXT` | `https://github.com/ramakrishnanWT/datamapper-webapp.git#main` | Build source. Set to `.` to build from a local checkout. |
+| `KAOTO_REPO` | `https://github.com/KaotoIO/kaoto` | Upstream Kaoto repo. |
+| `KAOTO_REF` | `main` | Kaoto branch / tag / commit. |
+
+Examples:
+
+```bash
+DXM_PORT=9000 docker compose up -d                  # different host port
+DXM_REF=v1.2.0 docker compose up --build -d         # pin app version
+DXM_BUILD_CONTEXT=. docker compose up --build -d    # build from local sources
+KAOTO_REF=2.10.0 docker compose build --no-cache    # pin Kaoto version
+```
+
+The compose file mounts `./workspace` into the container at
+`/app/workspace`, so files saved through the sandboxed file API persist
+on the host between runs.
+
+### Option B — Plain `docker build` / `docker run` (script wrappers)
 
 ```bash
 cd datamapper-webapp
