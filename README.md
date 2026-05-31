@@ -65,6 +65,21 @@ Flask.
 Drop additional screenshots into [docs/screenshots/](docs/screenshots/)
 to extend this gallery.
 
+## Demo video
+
+A short walkthrough of the DXM (Data eXchange Mapper) UI — attaching
+schemas, drawing mappings, and generating XSLT — is checked in at
+[`docs/videos/quickstart-demo.mp4`](docs/videos/quickstart-demo.mp4).
+
+<video src="https://github.com/ramakrishnanWT/datamapper-webapp/raw/main/docs/videos/quickstart-demo.mp4" controls width="720">
+  Your browser does not support embedded video. Download it
+  <a href="docs/videos/quickstart-demo.mp4">here</a>.
+</video>
+
+> Tip: GitHub renders the `<video>` tag inline on the rendered README.
+> If you're viewing this file in a plain Markdown viewer, click the
+> link above to download and play locally.
+
 ## Architecture
 
 ```
