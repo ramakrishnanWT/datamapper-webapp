@@ -166,7 +166,7 @@ jobs:
 
 ## 8. Adding a New Test
 
-1. Identify the spec requirement ID from [SPEC.md](SPEC.md).
+1. Identify the spec requirement ID from [SPEC.md](../docs/SPEC.md).
 2. Add the test to `tests/test_app.py` (backend) or `tests/e2e/` (browser).
 3. Reference the spec ID in the test's docstring.
 4. Update the **Test Inventory** table in this document.

@@ -189,4 +189,4 @@ Generated XSLT targets XSLT 3.0 (Saxon), which supports JSON input natively. Thi
 | Token-based file API auth | Required before any shared/multi-user deployment |
 | Request size limits on `PUT /api/files` | Prevent abuse in shared deployments |
 
-See [PLAN.md](PLAN.md) for the full backlog.
+See [PLAN.md](../PLAN.md) for the full backlog.
