@@ -269,11 +269,12 @@ def delete_map(map_id: int):
     with _db_lock:
         con = _get_db()
         try:
-            affected = con.execute("DELETE FROM maps WHERE id = ?", [map_id]).rowcount
+            exists = con.execute("SELECT 1 FROM maps WHERE id = ?", [map_id]).fetchone()
+            if exists is None:
+                abort(404)
+            con.execute("DELETE FROM maps WHERE id = ?", [map_id])
         finally:
             con.close()
-    if affected == 0:
-        abort(404)
     return ("", 204)
 
 
