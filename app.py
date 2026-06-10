@@ -682,7 +682,7 @@ _TOOLBAR_HTML = """
         } else if (fname.endsWith('.schema.json') || fname.endsWith('.xsd')) {
           getText().then(t => {
             if (!t) return;
-            const isOut = /output|target|dest|[_-]out[._\-]/.test(fname);
+            const isOut = /output|target|dest|[_-]out[._-]/.test(fname);
             if (isOut) _data.out = t; else _data.in = t;
           });
         }
