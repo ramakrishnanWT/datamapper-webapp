@@ -885,12 +885,21 @@ def workspace_snapshot():
             except OSError:
                 continue
             low = fname.lower()
-            if low.endswith(".xsd"):
-                output_parts.append(f"<!-- {fname} -->\n{text}")
-            elif low.endswith(".schema.json"):
-                # Only .schema.json files are treated as input schemas;
-                # plain .json files (sample data, order.json, etc.) are ignored
-                input_parts.append(f"// {fname}\n{text}")
+            _INPUT_KW  = ("input", "source", "src", "-in.", "_in.", "-in-", "_in_")
+            _OUTPUT_KW = ("output", "target", "dest", "-out.", "_out.", "-out-", "_out_")
+            if low.endswith(".schema.json") or low.endswith(".xsd"):
+                # Both JSON Schema and XSD can be used for input or output.
+                # Determine direction from filename keywords; fall back to
+                # extension (.schema.json → input, .xsd → output) when ambiguous.
+                comment = f"<!-- {fname} -->" if low.endswith(".xsd") else f"// {fname}"
+                if any(kw in low for kw in _INPUT_KW):
+                    input_parts.append(f"{comment}\n{text}")
+                elif any(kw in low for kw in _OUTPUT_KW):
+                    output_parts.append(f"{comment}\n{text}")
+                elif low.endswith(".schema.json"):
+                    input_parts.append(f"{comment}\n{text}")
+                else:
+                    output_parts.append(f"{comment}\n{text}")
             elif low.endswith(".dmf") or low.endswith(".camel.yaml"):
                 map_parts.append(f"# {fname}\n{text}")
             elif low.endswith(".xsl") or low.endswith(".xslt"):
