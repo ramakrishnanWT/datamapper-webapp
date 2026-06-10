@@ -359,7 +359,7 @@ def maps_page():
 
 <header>
   <h1>DataMapper — Saved Maps</h1>
-  <a href="/">&#8592; Back to DataMapper</a>
+  <a href="#" onclick="window.close(); return false;">&#8592; Close &amp; return to DataMapper</a>
 </header>
 
 <div class="container">
@@ -601,16 +601,22 @@ _TOOLBAR_HTML = """
         <input type="text" id="dxm-name" placeholder="e.g. order-to-invoice-v1" autocomplete="off">
       </div>
 
+      <!-- Info banner -->
+      <div style="font-size:0.75rem;color:#555;background:#f5f5f5;border-radius:5px;padding:8px 10px;margin-bottom:14px;line-height:1.5;">
+        &#9432; Schemas loaded into Kaoto live in the browser only. Download them from Kaoto and upload below.
+        The XSLT is auto-captured if you have saved in Kaoto (Ctrl+S) — otherwise upload it too.
+      </div>
+
       <!-- Input Schema -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Input Schema <span class="badge badge-optional">optional</span></label>
+          <label>Input Schema <span class="badge badge-optional">optional — upload from disk</span></label>
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
             <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-in','dxm-in-fn')">
           </label>
-          <span class="dxm-fname empty" id="dxm-in-fn">No file chosen — upload JSON Schema (.json) or XSD (.xsd)</span>
+          <span class="dxm-fname empty" id="dxm-in-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
         </div>
         <input type="hidden" id="dxm-in">
       </div>
@@ -618,21 +624,21 @@ _TOOLBAR_HTML = """
       <!-- Output Schema -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Output Schema <span class="badge badge-optional">optional</span></label>
+          <label>Output Schema <span class="badge badge-optional">optional — upload from disk</span></label>
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
             <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-out','dxm-out-fn')">
           </label>
-          <span class="dxm-fname empty" id="dxm-out-fn">No file chosen — upload JSON Schema (.json) or XSD (.xsd)</span>
+          <span class="dxm-fname empty" id="dxm-out-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
         </div>
         <input type="hidden" id="dxm-out">
       </div>
 
-      <!-- Map Content -->
+      <!-- Map Content / XSLT -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Map Content (XSLT) <span class="badge badge-auto" id="dxm-map-badge">auto-capturing&hellip;</span></label>
+          <label>Map Content (XSLT) <span class="badge badge-auto" id="dxm-map-badge">checking workspace&hellip;</span></label>
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
