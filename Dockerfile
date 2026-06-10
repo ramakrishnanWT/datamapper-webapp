@@ -70,7 +70,7 @@ COPY app.py ./
 COPY sample/ ./sample/
 COPY --from=kaoto-builder /build/kaoto/packages/ui/dist /app/dist
 
-RUN mkdir -p /app/workspace \
+RUN mkdir -p /app/workspace /app/data \
  && chown -R app:app /app
 
 USER app
@@ -79,4 +79,5 @@ EXPOSE 5000
 
 # Production server (gunicorn) by default; flip CMD to `python app.py`
 # for the dev server with hot-reload.
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--threads", "4", "--timeout", "60", "app:app"]
+# WEB_CONCURRENCY env var (set in docker-compose.yml) controls worker count.
+CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "1", "--threads", "4", "--timeout", "60", "app:app"]

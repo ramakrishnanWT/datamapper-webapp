@@ -37,10 +37,15 @@ services:
       FLASK_PORT: "5000"
       FRONTEND_DIST: /app/dist
       WORKSPACE_DIR: /app/workspace
+      MAPS_DB: /app/data/maps.duckdb
+      # Single worker avoids multi-process DuckDB file conflicts.
+      # Threads handle concurrency within the one worker process.
+      WEB_CONCURRENCY: "1"
     volumes:
-      # Persist user workspace files outside the container.
-      # Only used when DXM_BUILD_CONTEXT is local (a remote Git context
-      # has no ./workspace on the host — create one or remove this line).
+      # Named volume for the DuckDB file — survives container restarts and
+      # rebuilds reliably (no host-filesystem permission issues from WSL).
+      - maps_data:/app/data
+      # Bind-mount for workspace files (schemas, dmf, xsl artefacts).
       - ./workspace:/app/workspace
     restart: unless-stopped
     healthcheck:
@@ -49,3 +54,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+volumes:
+  maps_data:
+    driver: local
