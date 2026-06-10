@@ -614,7 +614,7 @@ _TOOLBAR_HTML = """
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
-            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-in','dxm-in-fn')">
+            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'in','dxm-in-fn')">
           </label>
           <span class="dxm-fname empty" id="dxm-in-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
         </div>
@@ -628,7 +628,7 @@ _TOOLBAR_HTML = """
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
-            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-out','dxm-out-fn')">
+            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'out','dxm-out-fn')">
           </label>
           <span class="dxm-fname empty" id="dxm-out-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
         </div>
@@ -642,7 +642,7 @@ _TOOLBAR_HTML = """
         </div>
         <div class="dxm-upload-row">
           <label class="dxm-upload-btn">&#128194; Upload file
-            <input type="file" accept=".xsl,.xslt,.dmf,.yaml" style="display:none" onchange="dxmReadFile(this,'dxm-map','dxm-map-fn')">
+            <input type="file" accept=".xsl,.xslt,.dmf,.yaml" style="display:none" onchange="dxmReadFile(this,'map','dxm-map-fn')">
           </label>
           <span class="dxm-fname empty" id="dxm-map-fn">Checking workspace&hellip;</span>
         </div>
@@ -661,16 +661,121 @@ _TOOLBAR_HTML = """
 
 <script>
 (function(){
-  window.dxmReadFile = function(input, hiddenId, fnameId){
+  // Store file/content in JS variables — avoids any DOM reference issues
+  const _data = { in: '', out: '', map: '' };
+
+  window.dxmReadFile = function(input, key, fnameId){
     const file = input.files[0];
     if(!file) return;
     const fnEl = document.getElementById(fnameId);
     fnEl.textContent = file.name;
     fnEl.classList.remove('empty');
     const r = new FileReader();
-    r.onload = e => { document.getElementById(hiddenId).value = e.target.result; };
+    r.onload = e => {
+      _data[key] = e.target.result;
+      // Also update the hidden input as a visual debug aid
+      const hiddenEl = document.getElementById('dxm-' + key);
+      if(hiddenEl) hiddenEl.value = e.target.result;
+    };
     r.readAsText(file);
   };
+
+  function setMapStatus(state, text){
+    const dot = document.getElementById('dxm-map-dot');
+    dot.className = 'dot ' + state;
+    document.getElementById('dxm-map-status-text').textContent = text;
+    const badge = document.getElementById('dxm-map-badge');
+    if(state === 'ok'){
+      badge.textContent = 'auto-captured \u2713';
+      badge.className = 'badge badge-auto';
+    } else if(state === 'empty'){
+      badge.textContent = 'not found in workspace';
+      badge.className = 'badge badge-optional';
+    } else {
+      badge.textContent = 'auto-capturing\u2026';
+      badge.className = 'badge badge-auto';
+    }
+  }
+
+  async function dxmLoadMapFromWorkspace(){
+    setMapStatus('loading', '');
+    try{
+      const r = await fetch('/api/workspace-snapshot');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      const mapVal = d.map_content || '';
+      if(mapVal){
+        _data.map = mapVal;
+        const fnEl = document.getElementById('dxm-map-fn');
+        fnEl.textContent = 'Captured from workspace';
+        fnEl.classList.remove('empty');
+        setMapStatus('ok', 'XSLT captured from workspace. Upload a file above to override.');
+      } else {
+        setMapStatus('empty', 'No XSLT found in workspace. Save your map in Kaoto first (Ctrl+S), then re-open this dialog \u2014 or upload the file above.');
+        document.getElementById('dxm-map-fn').textContent = 'No XSLT in workspace \u2014 upload above';
+      }
+    }catch(e){
+      setMapStatus('empty', 'Could not read workspace. Upload the XSLT file above.');
+      document.getElementById('dxm-map-fn').textContent = 'Upload above';
+    }
+  }
+
+  window.dxmOpenSave = function(){
+    _data.in = ''; _data.out = ''; _data.map = '';
+    document.getElementById('dxm-name').value = '';
+    document.getElementById('dxm-msg').textContent = '';
+    document.getElementById('dxm-in-fn').textContent = 'No file chosen \u2014 JSON Schema (.json) or XSD (.xsd)';
+    document.getElementById('dxm-in-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-out-fn').textContent = 'No file chosen \u2014 JSON Schema (.json) or XSD (.xsd)';
+    document.getElementById('dxm-out-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-map-fn').textContent = 'Checking workspace\u2026';
+    document.getElementById('dxm-map-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-modal-bg').classList.add('open');
+    setTimeout(() => document.getElementById('dxm-name').focus(), 60);
+    dxmLoadMapFromWorkspace();
+  };
+
+  window.dxmClose = function(){
+    document.getElementById('dxm-modal-bg').classList.remove('open');
+  };
+
+  window.dxmSave = async function(){
+    const name = document.getElementById('dxm-name').value.trim();
+    const msg  = document.getElementById('dxm-msg');
+    if(!name){ msg.className='err'; msg.textContent='Name is required.'; return; }
+    msg.className=''; msg.textContent='Saving\u2026';
+    const btn = document.getElementById('dxm-save-btn');
+    btn.disabled = true;
+    try{
+      const res = await fetch('/api/maps',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name,
+          input_schema:  _data.in,
+          output_schema: _data.out,
+          map_content:   _data.map,
+        })
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      msg.className='ok'; msg.textContent='\u2713 Saved as \u201c'+name+'\u201d (ID '+d.id+')';
+      setTimeout(()=>dxmClose(), 1200);
+    }catch(e){
+      msg.className='err'; msg.textContent='Error: '+e.message;
+    }finally{
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('dxm-modal-bg').addEventListener('click', function(e){
+    if(e.target===this) dxmClose();
+  });
+  document.getElementById('dxm-name').addEventListener('keydown', function(e){
+    if(e.key==='Enter') dxmSave();
+  });
+})();
+</script>
 
   function setMapStatus(state, text){
     const dot = document.getElementById('dxm-map-dot');
