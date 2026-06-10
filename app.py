@@ -887,12 +887,10 @@ def workspace_snapshot():
             low = fname.lower()
             if low.endswith(".xsd"):
                 output_parts.append(f"<!-- {fname} -->\n{text}")
-            elif low.endswith(".schema.json") or low.endswith(".json"):
-                # Any JSON file is treated as input schema (schemas uploaded
-                # by Kaoto land here; sample data files are typically not .json
-                # at the top level unless deliberately placed)
-                if ".gitkeep" not in low:
-                    input_parts.append(f"// {fname}\n{text}")
+            elif low.endswith(".schema.json"):
+                # Only .schema.json files are treated as input schemas;
+                # plain .json files (sample data, order.json, etc.) are ignored
+                input_parts.append(f"// {fname}\n{text}")
             elif low.endswith(".dmf") or low.endswith(".camel.yaml"):
                 map_parts.append(f"# {fname}\n{text}")
             elif low.endswith(".xsl") or low.endswith(".xslt"):
