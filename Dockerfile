@@ -30,6 +30,8 @@ RUN apt-get update \
 WORKDIR /build
 
 # Clone Kaoto (shallow).
+# Pass --build-arg KAOTO_CACHE_BUST=$(date +%s) to force a fresh clone.
+ARG KAOTO_CACHE_BUST=1
 RUN git clone --depth 1 --branch "${KAOTO_REF}" "${KAOTO_REPO}" kaoto
 
 # Apply the Data eXchange Mapper patch.
