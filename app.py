@@ -583,6 +583,7 @@ _TOOLBAR_HTML = """
 
 <div id="dxm-bar">
   <span style="color:#aaa;font-size:11px;font-weight:600;letter-spacing:.05em">DXM</span>
+  <button id="dxm-save-ws-btn" onclick="dxmSaveToWorkspace()">&#128427; Save XSLT</button>
   <button onclick="dxmOpenSave()">&#128190; Save Map</button>
   <a href="/maps" target="_blank">&#128203; Saved Maps &#8599;</a>
 </div>
@@ -761,101 +762,19 @@ _TOOLBAR_HTML = """
     }
   };
 
-  document.getElementById('dxm-modal-bg').addEventListener('click', function(e){
-    if(e.target===this) dxmClose();
-  });
-  document.getElementById('dxm-name').addEventListener('keydown', function(e){
-    if(e.key==='Enter') dxmSave();
-  });
-})();
-</script>
-
-  function setMapStatus(state, text){
-    const dot = document.getElementById('dxm-map-dot');
-    dot.className = 'dot ' + state;
-    document.getElementById('dxm-map-status-text').textContent = text;
-    const badge = document.getElementById('dxm-map-badge');
-    if(state === 'ok'){
-      badge.textContent = 'auto-captured \u2713';
-      badge.className = 'badge badge-auto';
-    } else if(state === 'empty'){
-      badge.textContent = 'not found in workspace';
-      badge.className = 'badge badge-optional';
-    } else {
-      badge.textContent = 'auto-capturing\u2026';
-      badge.className = 'badge badge-auto';
-    }
-  }
-
-  async function dxmLoadMapFromWorkspace(){
-    setMapStatus('loading', '');
-    try{
-      const r = await fetch('/api/workspace-snapshot');
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      const d = await r.json();
-      const mapVal = d.map_content || '';
-      if(mapVal){
-        document.getElementById('dxm-map').value = mapVal;
-        const fnEl = document.getElementById('dxm-map-fn');
-        fnEl.textContent = 'Captured from workspace';
-        fnEl.classList.remove('empty');
-        setMapStatus('ok', 'XSLT captured from workspace. Upload a file above to override.');
-      } else {
-        setMapStatus('empty', 'No XSLT found in workspace. Save your map in Kaoto first (Ctrl+S), then re-open this dialog \u2014 or upload the file above.');
-        document.getElementById('dxm-map-fn').textContent = 'No XSLT in workspace \u2014 upload above';
-      }
-    }catch(e){
-      setMapStatus('empty', 'Could not read workspace. Upload the XSLT file above.');
-      document.getElementById('dxm-map-fn').textContent = 'Upload above';
-    }
-  }
-
-  window.dxmOpenSave = function(){
-    document.getElementById('dxm-name').value = '';
-    document.getElementById('dxm-msg').textContent = '';
-    ['dxm-in','dxm-out','dxm-map'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('dxm-in-fn').textContent = 'No file chosen \u2014 upload JSON Schema (.json) or XSD (.xsd)';
-    document.getElementById('dxm-in-fn').className = 'dxm-fname empty';
-    document.getElementById('dxm-out-fn').textContent = 'No file chosen \u2014 upload JSON Schema (.json) or XSD (.xsd)';
-    document.getElementById('dxm-out-fn').className = 'dxm-fname empty';
-    document.getElementById('dxm-map-fn').textContent = 'Checking workspace\u2026';
-    document.getElementById('dxm-map-fn').className = 'dxm-fname empty';
-    document.getElementById('dxm-modal-bg').classList.add('open');
-    setTimeout(() => document.getElementById('dxm-name').focus(), 60);
-    dxmLoadMapFromWorkspace();
-  };
-
-  window.dxmClose = function(){
-    document.getElementById('dxm-modal-bg').classList.remove('open');
-  };
-
-  window.dxmSave = async function(){
-    const name = document.getElementById('dxm-name').value.trim();
-    const msg  = document.getElementById('dxm-msg');
-    if(!name){ msg.className='err'; msg.textContent='Name is required.'; return; }
-    msg.className=''; msg.textContent='Saving\u2026';
-    const btn = document.getElementById('dxm-save-btn');
+  // ── Save XSLT to workspace (triggers Kaoto's own Ctrl+S handler) ──
+  window.dxmSaveToWorkspace = function(){
+    const btn = document.getElementById('dxm-save-ws-btn');
+    const orig = btn.textContent;
+    // Dispatch Ctrl+S into the Kaoto app iframe/document so it writes the XSLT
+    const ev = new KeyboardEvent('keydown', {
+      key: 's', code: 'KeyS', ctrlKey: true, metaKey: false,
+      bubbles: true, cancelable: true
+    });
+    document.dispatchEvent(ev);
+    btn.textContent = '\u2713 Saved!';
     btn.disabled = true;
-    try{
-      const res = await fetch('/api/maps',{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          name,
-          input_schema:  document.getElementById('dxm-in').value,
-          output_schema: document.getElementById('dxm-out').value,
-          map_content:   document.getElementById('dxm-map').value,
-        })
-      });
-      if(!res.ok) throw new Error(await res.text());
-      const d = await res.json();
-      msg.className='ok'; msg.textContent='\u2713 Saved as \u201c'+name+'\u201d (ID '+d.id+')';
-      setTimeout(()=>dxmClose(), 1200);
-    }catch(e){
-      msg.className='err'; msg.textContent='Error: '+e.message;
-    }finally{
-      btn.disabled = false;
-    }
+    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
   };
 
   document.getElementById('dxm-modal-bg').addEventListener('click', function(e){
@@ -866,6 +785,7 @@ _TOOLBAR_HTML = """
   });
 })();
 </script>
+
 <!-- ── end DXM toolbar ───────────────────────────────────────────────── -->
 """
 
