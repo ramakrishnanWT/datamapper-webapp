@@ -700,7 +700,7 @@ _TOOLBAR_HTML = """
       if(captured.length){
         setSnapStatus('ok', 'Captured from workspace: ' + captured.join(', ') + '.');
       } else {
-        setSnapStatus('empty', 'No workspace files found — expand below to paste or upload content.');
+        setSnapStatus('empty', 'Nothing saved to workspace yet. In Kaoto, press Ctrl+S (or the save icon) to write the map, then re-open this dialog. Or expand below to upload manually.');
         // auto-open review panel when nothing was captured
         document.getElementById('dxm-review-panel').classList.add('open');
         document.getElementById('dxm-review-toggle').textContent = '\u25b2 Review / override captured content';
@@ -802,6 +802,9 @@ def workspace_snapshot():
                 map_parts.append(f"# {fname}\n{text}")
             elif low.endswith(".xsl") or low.endswith(".xslt"):
                 map_parts.append(f"<!-- {fname} -->\n{text}")
+            elif low.endswith(".json") and not low.endswith(".schema.json"):
+                # generic JSON — could be a schema; classify as input
+                input_parts.append(f"// {fname}\n{text}")
 
     return jsonify(
         {
