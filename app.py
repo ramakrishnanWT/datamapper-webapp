@@ -547,6 +547,228 @@ _TOOLBAR_HTML = """
   #dxm-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;
     align-items:center;justify-content:center;}
   #dxm-modal-bg.open{display:flex;}
+  #dxm-modal{background:#fff;border-radius:10px;width:540px;max-width:96vw;max-height:92vh;
+    display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.3);color:#222;overflow:hidden;font-family:system-ui,sans-serif;}
+  #dxm-modal .mh{padding:14px 18px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
+  #dxm-modal .mh h3{margin:0;font-size:1rem;}
+  #dxm-modal .mh button{background:none;border:none;font-size:1.3rem;cursor:pointer;color:#888;}
+  #dxm-modal .mb{padding:16px 18px;overflow-y:auto;flex:1;}
+  #dxm-modal .mf{padding:12px 18px;border-top:1px solid #eee;display:flex;gap:10px;justify-content:flex-end;align-items:center;}
+  .dxm-field{margin-bottom:14px;}
+  .dxm-field-hdr{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .dxm-field-hdr label{font-size:0.78rem;font-weight:600;color:#444;flex:1;margin:0;}
+  .dxm-field-hdr .badge{font-size:0.65rem;padding:1px 6px;border-radius:10px;font-weight:600;}
+  .badge-required{background:#fde8e8;color:#b00;}
+  .badge-auto{background:#e6f4ea;color:#1a7a2a;}
+  .badge-optional{background:#f0f0f0;color:#666;}
+  #dxm-modal input[type=text]{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:5px;font-size:0.92rem;box-sizing:border-box;}
+  .dxm-upload-row{display:flex;align-items:center;gap:8px;}
+  .dxm-upload-btn{font-size:0.72rem;padding:3px 10px;background:#e8f0fe;color:#0078d4;
+    border:1px solid #c0d4f5;border-radius:4px;cursor:pointer;white-space:nowrap;flex-shrink:0;}
+  .dxm-upload-btn:hover{background:#d0e4fc;}
+  .dxm-fname{font-size:0.7rem;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;}
+  .dxm-fname.empty{color:#aaa;font-style:italic;}
+  .dxm-map-status{font-size:0.73rem;margin-top:4px;display:flex;align-items:center;gap:5px;}
+  .dxm-map-status .dot{width:7px;height:7px;border-radius:50%;background:#ccc;flex-shrink:0;}
+  .dxm-map-status .dot.ok{background:#2a7a2a;} .dxm-map-status .dot.empty{background:#e0a000;}
+  .dxm-map-status .dot.loading{background:#0078d4;animation:dxmpulse 1s infinite;}
+  @keyframes dxmpulse{0%,100%{opacity:1}50%{opacity:.3}}
+  #dxm-msg{font-size:0.8rem;margin-top:6px;}
+  #dxm-msg.ok{color:#1a7a2a;} #dxm-msg.err{color:#c00;}
+  .btn-ok{background:#0078d4;color:#fff;border:none;border-radius:6px;padding:7px 16px;cursor:pointer;font-size:0.85rem;font-weight:600;}
+  .btn-ok:hover{background:#006cbe;} .btn-ok:disabled{background:#8ab8e0;cursor:default;}
+  .btn-cn{background:#e0e1e5;color:#222;border:none;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:0.85rem;}
+  .dxm-hint{font-size:0.72rem;color:#888;margin-top:3px;line-height:1.4;}
+</style>
+
+<div id="dxm-bar">
+  <span style="color:#aaa;font-size:11px;font-weight:600;letter-spacing:.05em">DXM</span>
+  <button onclick="dxmOpenSave()">&#128190; Save Map</button>
+  <a href="/maps" target="_blank">&#128203; Saved Maps &#8599;</a>
+</div>
+
+<div id="dxm-modal-bg">
+  <div id="dxm-modal">
+    <div class="mh">
+      <h3>Save Current Map</h3>
+      <button onclick="dxmClose()">&times;</button>
+    </div>
+    <div class="mb">
+
+      <!-- Name -->
+      <div class="dxm-field">
+        <div class="dxm-field-hdr"><label>Map Name <span class="badge badge-required">required</span></label></div>
+        <input type="text" id="dxm-name" placeholder="e.g. order-to-invoice-v1" autocomplete="off">
+      </div>
+
+      <!-- Input Schema -->
+      <div class="dxm-field">
+        <div class="dxm-field-hdr">
+          <label>Input Schema <span class="badge badge-optional">optional</span></label>
+        </div>
+        <div class="dxm-upload-row">
+          <label class="dxm-upload-btn">&#128194; Upload file
+            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-in','dxm-in-fn')">
+          </label>
+          <span class="dxm-fname empty" id="dxm-in-fn">No file chosen — upload JSON Schema (.json) or XSD (.xsd)</span>
+        </div>
+        <input type="hidden" id="dxm-in">
+      </div>
+
+      <!-- Output Schema -->
+      <div class="dxm-field">
+        <div class="dxm-field-hdr">
+          <label>Output Schema <span class="badge badge-optional">optional</span></label>
+        </div>
+        <div class="dxm-upload-row">
+          <label class="dxm-upload-btn">&#128194; Upload file
+            <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'dxm-out','dxm-out-fn')">
+          </label>
+          <span class="dxm-fname empty" id="dxm-out-fn">No file chosen — upload JSON Schema (.json) or XSD (.xsd)</span>
+        </div>
+        <input type="hidden" id="dxm-out">
+      </div>
+
+      <!-- Map Content -->
+      <div class="dxm-field">
+        <div class="dxm-field-hdr">
+          <label>Map Content (XSLT) <span class="badge badge-auto" id="dxm-map-badge">auto-capturing&hellip;</span></label>
+        </div>
+        <div class="dxm-upload-row">
+          <label class="dxm-upload-btn">&#128194; Upload file
+            <input type="file" accept=".xsl,.xslt,.dmf,.yaml" style="display:none" onchange="dxmReadFile(this,'dxm-map','dxm-map-fn')">
+          </label>
+          <span class="dxm-fname empty" id="dxm-map-fn">Checking workspace&hellip;</span>
+        </div>
+        <div class="dxm-map-status"><span class="dot loading" id="dxm-map-dot"></span><span id="dxm-map-status-text"></span></div>
+        <input type="hidden" id="dxm-map">
+      </div>
+
+      <div id="dxm-msg"></div>
+    </div>
+    <div class="mf">
+      <button class="btn-cn" onclick="dxmClose()">Cancel</button>
+      <button class="btn-ok" id="dxm-save-btn" onclick="dxmSave()">Save to DuckDB</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  window.dxmReadFile = function(input, hiddenId, fnameId){
+    const file = input.files[0];
+    if(!file) return;
+    const fnEl = document.getElementById(fnameId);
+    fnEl.textContent = file.name;
+    fnEl.classList.remove('empty');
+    const r = new FileReader();
+    r.onload = e => { document.getElementById(hiddenId).value = e.target.result; };
+    r.readAsText(file);
+  };
+
+  function setMapStatus(state, text){
+    const dot = document.getElementById('dxm-map-dot');
+    dot.className = 'dot ' + state;
+    document.getElementById('dxm-map-status-text').textContent = text;
+    const badge = document.getElementById('dxm-map-badge');
+    if(state === 'ok'){
+      badge.textContent = 'auto-captured \u2713';
+      badge.className = 'badge badge-auto';
+    } else if(state === 'empty'){
+      badge.textContent = 'not found in workspace';
+      badge.className = 'badge badge-optional';
+    } else {
+      badge.textContent = 'auto-capturing\u2026';
+      badge.className = 'badge badge-auto';
+    }
+  }
+
+  async function dxmLoadMapFromWorkspace(){
+    setMapStatus('loading', '');
+    try{
+      const r = await fetch('/api/workspace-snapshot');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      const mapVal = d.map_content || '';
+      if(mapVal){
+        document.getElementById('dxm-map').value = mapVal;
+        const fnEl = document.getElementById('dxm-map-fn');
+        fnEl.textContent = 'Captured from workspace';
+        fnEl.classList.remove('empty');
+        setMapStatus('ok', 'XSLT captured from workspace. Upload a file above to override.');
+      } else {
+        setMapStatus('empty', 'No XSLT found in workspace. Save your map in Kaoto first (Ctrl+S), then re-open this dialog \u2014 or upload the file above.');
+        document.getElementById('dxm-map-fn').textContent = 'No XSLT in workspace \u2014 upload above';
+      }
+    }catch(e){
+      setMapStatus('empty', 'Could not read workspace. Upload the XSLT file above.');
+      document.getElementById('dxm-map-fn').textContent = 'Upload above';
+    }
+  }
+
+  window.dxmOpenSave = function(){
+    document.getElementById('dxm-name').value = '';
+    document.getElementById('dxm-msg').textContent = '';
+    ['dxm-in','dxm-out','dxm-map'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('dxm-in-fn').textContent = 'No file chosen \u2014 upload JSON Schema (.json) or XSD (.xsd)';
+    document.getElementById('dxm-in-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-out-fn').textContent = 'No file chosen \u2014 upload JSON Schema (.json) or XSD (.xsd)';
+    document.getElementById('dxm-out-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-map-fn').textContent = 'Checking workspace\u2026';
+    document.getElementById('dxm-map-fn').className = 'dxm-fname empty';
+    document.getElementById('dxm-modal-bg').classList.add('open');
+    setTimeout(() => document.getElementById('dxm-name').focus(), 60);
+    dxmLoadMapFromWorkspace();
+  };
+
+  window.dxmClose = function(){
+    document.getElementById('dxm-modal-bg').classList.remove('open');
+  };
+
+  window.dxmSave = async function(){
+    const name = document.getElementById('dxm-name').value.trim();
+    const msg  = document.getElementById('dxm-msg');
+    if(!name){ msg.className='err'; msg.textContent='Name is required.'; return; }
+    msg.className=''; msg.textContent='Saving\u2026';
+    const btn = document.getElementById('dxm-save-btn');
+    btn.disabled = true;
+    try{
+      const res = await fetch('/api/maps',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          name,
+          input_schema:  document.getElementById('dxm-in').value,
+          output_schema: document.getElementById('dxm-out').value,
+          map_content:   document.getElementById('dxm-map').value,
+        })
+      });
+      if(!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      msg.className='ok'; msg.textContent='\u2713 Saved as \u201c'+name+'\u201d (ID '+d.id+')';
+      setTimeout(()=>dxmClose(), 1200);
+    }catch(e){
+      msg.className='err'; msg.textContent='Error: '+e.message;
+    }finally{
+      btn.disabled = false;
+    }
+  };
+
+  document.getElementById('dxm-modal-bg').addEventListener('click', function(e){
+    if(e.target===this) dxmClose();
+  });
+  document.getElementById('dxm-name').addEventListener('keydown', function(e){
+    if(e.key==='Enter') dxmSave();
+  });
+  #dxm-bar a{color:#7ec8e3;text-decoration:none;font-weight:500;}
+  #dxm-bar a:hover{text-decoration:underline;}
+  #dxm-bar button{cursor:pointer;border:none;border-radius:6px;padding:5px 12px;
+    font-size:12px;font-weight:600;background:#0078d4;color:#fff;}
+  #dxm-bar button:hover{background:#006cbe;}
+  /* modal */
+  #dxm-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999999;
+    align-items:center;justify-content:center;}
+  #dxm-modal-bg.open{display:flex;}
   #dxm-modal{background:#fff;border-radius:10px;width:520px;max-width:95vw;max-height:90vh;
     display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.3);color:#222;overflow:hidden;}
   #dxm-modal .mh{padding:14px 18px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;}
@@ -802,9 +1024,6 @@ def workspace_snapshot():
                 map_parts.append(f"# {fname}\n{text}")
             elif low.endswith(".xsl") or low.endswith(".xslt"):
                 map_parts.append(f"<!-- {fname} -->\n{text}")
-            elif low.endswith(".json") and not low.endswith(".schema.json"):
-                # generic JSON — could be a schema; classify as input
-                input_parts.append(f"// {fname}\n{text}")
 
     return jsonify(
         {
