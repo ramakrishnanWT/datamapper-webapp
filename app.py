@@ -603,20 +603,19 @@ _TOOLBAR_HTML = """
 
       <!-- Info banner -->
       <div style="font-size:0.75rem;color:#555;background:#f5f5f5;border-radius:5px;padding:8px 10px;margin-bottom:14px;line-height:1.5;">
-        &#9432; Schemas loaded into Kaoto live in the browser only. Download them from Kaoto and upload below.
-        The XSLT is auto-captured if you have saved in Kaoto (Ctrl+S) — otherwise upload it too.
+        &#9432; Content is auto-captured from the workspace. Upload a file to override any field.
       </div>
 
       <!-- Input Schema -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Input Schema <span class="badge badge-optional">optional — upload from disk</span></label>
+          <label>Input Schema <span class="badge" id="dxm-in-badge">checking&hellip;</span></label>
         </div>
         <div class="dxm-upload-row">
-          <label class="dxm-upload-btn">&#128194; Upload file
+          <label class="dxm-upload-btn">&#128194; Override
             <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'in','dxm-in-fn')">
           </label>
-          <span class="dxm-fname empty" id="dxm-in-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
+          <span class="dxm-fname empty" id="dxm-in-fn">Checking workspace&hellip;</span>
         </div>
         <input type="hidden" id="dxm-in">
       </div>
@@ -624,13 +623,13 @@ _TOOLBAR_HTML = """
       <!-- Output Schema -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Output Schema <span class="badge badge-optional">optional — upload from disk</span></label>
+          <label>Output Schema <span class="badge" id="dxm-out-badge">checking&hellip;</span></label>
         </div>
         <div class="dxm-upload-row">
-          <label class="dxm-upload-btn">&#128194; Upload file
+          <label class="dxm-upload-btn">&#128194; Override
             <input type="file" accept=".json,.schema.json,.xsd,.xml" style="display:none" onchange="dxmReadFile(this,'out','dxm-out-fn')">
           </label>
-          <span class="dxm-fname empty" id="dxm-out-fn">No file chosen — JSON Schema (.json) or XSD (.xsd)</span>
+          <span class="dxm-fname empty" id="dxm-out-fn">Checking workspace&hellip;</span>
         </div>
         <input type="hidden" id="dxm-out">
       </div>
@@ -638,15 +637,14 @@ _TOOLBAR_HTML = """
       <!-- Map Content / XSLT -->
       <div class="dxm-field">
         <div class="dxm-field-hdr">
-          <label>Map Content (XSLT) <span class="badge badge-auto" id="dxm-map-badge">checking workspace&hellip;</span></label>
+          <label>Map Content (XSLT) <span class="badge" id="dxm-map-badge">checking&hellip;</span></label>
         </div>
         <div class="dxm-upload-row">
-          <label class="dxm-upload-btn">&#128194; Upload file
+          <label class="dxm-upload-btn">&#128194; Override
             <input type="file" accept=".xsl,.xslt,.dmf,.yaml" style="display:none" onchange="dxmReadFile(this,'map','dxm-map-fn')">
           </label>
           <span class="dxm-fname empty" id="dxm-map-fn">Checking workspace&hellip;</span>
         </div>
-        <div class="dxm-map-status"><span class="dot loading" id="dxm-map-dot"></span><span id="dxm-map-status-text"></span></div>
         <input type="hidden" id="dxm-map">
       </div>
 
@@ -661,62 +659,63 @@ _TOOLBAR_HTML = """
 
 <script>
 (function(){
-  // Store file/content in JS variables — avoids any DOM reference issues
+  // Store content in JS variables — avoids any DOM reference issues
   const _data = { in: '', out: '', map: '' };
+
+  function setBadge(key, hasContent){
+    const badge = document.getElementById('dxm-' + key + '-badge');
+    if(!badge) return;
+    if(hasContent){
+      badge.textContent = 'captured \u2713';
+      badge.className = 'badge badge-auto';
+    } else {
+      badge.textContent = 'not found \u2014 upload to add';
+      badge.className = 'badge badge-optional';
+    }
+  }
+
+  function setFname(key, text, isEmpty){
+    const el = document.getElementById('dxm-' + key + '-fn');
+    if(!el) return;
+    el.textContent = text;
+    el.className = 'dxm-fname' + (isEmpty ? ' empty' : '');
+  }
 
   window.dxmReadFile = function(input, key, fnameId){
     const file = input.files[0];
     if(!file) return;
-    const fnEl = document.getElementById(fnameId);
-    fnEl.textContent = file.name;
-    fnEl.classList.remove('empty');
+    setFname(key, file.name, false);
+    setBadge(key, true);
     const r = new FileReader();
-    r.onload = e => {
-      _data[key] = e.target.result;
-      // Also update the hidden input as a visual debug aid
-      const hiddenEl = document.getElementById('dxm-' + key);
-      if(hiddenEl) hiddenEl.value = e.target.result;
-    };
+    r.onload = e => { _data[key] = e.target.result; };
     r.readAsText(file);
   };
 
-  function setMapStatus(state, text){
-    const dot = document.getElementById('dxm-map-dot');
-    dot.className = 'dot ' + state;
-    document.getElementById('dxm-map-status-text').textContent = text;
-    const badge = document.getElementById('dxm-map-badge');
-    if(state === 'ok'){
-      badge.textContent = 'auto-captured \u2713';
-      badge.className = 'badge badge-auto';
-    } else if(state === 'empty'){
-      badge.textContent = 'not found in workspace';
-      badge.className = 'badge badge-optional';
-    } else {
-      badge.textContent = 'auto-capturing\u2026';
-      badge.className = 'badge badge-auto';
-    }
-  }
-
-  async function dxmLoadMapFromWorkspace(){
-    setMapStatus('loading', '');
+  async function dxmLoadSnapshot(){
+    // Reset badges to loading
+    ['in','out','map'].forEach(k => {
+      const b = document.getElementById('dxm-' + k + '-badge');
+      if(b){ b.textContent = 'checking\u2026'; b.className = 'badge badge-auto'; }
+      setFname(k, 'Checking workspace\u2026', true);
+    });
     try{
       const r = await fetch('/api/workspace-snapshot');
       if(!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      const mapVal = d.map_content || '';
-      if(mapVal){
-        _data.map = mapVal;
-        const fnEl = document.getElementById('dxm-map-fn');
-        fnEl.textContent = 'Captured from workspace';
-        fnEl.classList.remove('empty');
-        setMapStatus('ok', 'XSLT captured from workspace. Upload a file above to override.');
-      } else {
-        setMapStatus('empty', 'No XSLT found in workspace. Save your map in Kaoto first (Ctrl+S), then re-open this dialog \u2014 or upload the file above.');
-        document.getElementById('dxm-map-fn').textContent = 'No XSLT in workspace \u2014 upload above';
-      }
+      _data.in  = d.input_schema  || '';
+      _data.out = d.output_schema || '';
+      _data.map = d.map_content   || '';
+      setBadge('in',  !!_data.in);
+      setBadge('out', !!_data.out);
+      setBadge('map', !!_data.map);
+      setFname('in',  _data.in  ? 'Captured from workspace' : 'Not found \u2014 upload above', !_data.in);
+      setFname('out', _data.out ? 'Captured from workspace' : 'Not found \u2014 upload above', !_data.out);
+      setFname('map', _data.map ? 'Captured from workspace' : 'Not found \u2014 save in Kaoto (Ctrl+S) first or upload', !_data.map);
     }catch(e){
-      setMapStatus('empty', 'Could not read workspace. Upload the XSLT file above.');
-      document.getElementById('dxm-map-fn').textContent = 'Upload above';
+      ['in','out','map'].forEach(k => {
+        setBadge(k, false);
+        setFname(k, 'Could not read workspace \u2014 upload above', true);
+      });
     }
   }
 
@@ -724,15 +723,9 @@ _TOOLBAR_HTML = """
     _data.in = ''; _data.out = ''; _data.map = '';
     document.getElementById('dxm-name').value = '';
     document.getElementById('dxm-msg').textContent = '';
-    document.getElementById('dxm-in-fn').textContent = 'No file chosen \u2014 JSON Schema (.json) or XSD (.xsd)';
-    document.getElementById('dxm-in-fn').className = 'dxm-fname empty';
-    document.getElementById('dxm-out-fn').textContent = 'No file chosen \u2014 JSON Schema (.json) or XSD (.xsd)';
-    document.getElementById('dxm-out-fn').className = 'dxm-fname empty';
-    document.getElementById('dxm-map-fn').textContent = 'Checking workspace\u2026';
-    document.getElementById('dxm-map-fn').className = 'dxm-fname empty';
     document.getElementById('dxm-modal-bg').classList.add('open');
     setTimeout(() => document.getElementById('dxm-name').focus(), 60);
-    dxmLoadMapFromWorkspace();
+    dxmLoadSnapshot();
   };
 
   window.dxmClose = function(){
@@ -894,8 +887,12 @@ def workspace_snapshot():
             low = fname.lower()
             if low.endswith(".xsd"):
                 output_parts.append(f"<!-- {fname} -->\n{text}")
-            elif low.endswith(".schema.json") or (low.endswith(".json") and "input" in low):
-                input_parts.append(f"// {fname}\n{text}")
+            elif low.endswith(".schema.json") or low.endswith(".json"):
+                # Any JSON file is treated as input schema (schemas uploaded
+                # by Kaoto land here; sample data files are typically not .json
+                # at the top level unless deliberately placed)
+                if ".gitkeep" not in low:
+                    input_parts.append(f"// {fname}\n{text}")
             elif low.endswith(".dmf") or low.endswith(".camel.yaml"):
                 map_parts.append(f"# {fname}\n{text}")
             elif low.endswith(".xsl") or low.endswith(".xslt"):
