@@ -583,7 +583,6 @@ _TOOLBAR_HTML = """
 
 <div id="dxm-bar">
   <span style="color:#aaa;font-size:11px;font-weight:600;letter-spacing:.05em">DXM</span>
-  <button id="dxm-save-ws-btn" onclick="dxmSaveToWorkspace()">&#128427; Save XSLT</button>
   <button onclick="dxmOpenSave()">&#128190; Save Map</button>
   <a href="/maps" target="_blank">&#128203; Saved Maps &#8599;</a>
 </div>
@@ -604,7 +603,7 @@ _TOOLBAR_HTML = """
 
       <!-- Info banner -->
       <div style="font-size:0.75rem;color:#555;background:#f5f5f5;border-radius:5px;padding:8px 10px;margin-bottom:14px;line-height:1.5;">
-        &#9432; Content is auto-captured from the workspace. Upload a file to override any field.
+        &#9432; XSLT and schemas are captured automatically as you work. Upload a file to override any field.
       </div>
 
       <!-- Input Schema -->
@@ -660,8 +659,37 @@ _TOOLBAR_HTML = """
 
 <script>
 (function(){
-  // Store content in JS variables — avoids any DOM reference issues
+  // Live capture: intercept every fetch Kaoto makes so we always have
+  // the latest content without requiring any explicit save action.
   const _data = { in: '', out: '', map: '' };
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    const result = _origFetch(url, opts);
+    try {
+      if (opts && (opts.method || '').toUpperCase() === 'PUT' &&
+          typeof url === 'string' && url.includes('/api/files/')) {
+        const fname = url.split('?')[0].split('/').pop().toLowerCase();
+        const body  = opts.body;
+        const getText = () => {
+          if (typeof body === 'string')      return Promise.resolve(body);
+          if (body instanceof Blob)          return body.text();
+          if (body instanceof ArrayBuffer)   return Promise.resolve(new TextDecoder().decode(body));
+          return Promise.resolve('');
+        };
+        if (fname.endsWith('.xsl') || fname.endsWith('.xslt') ||
+            fname.endsWith('.dmf') || fname.endsWith('.camel.yaml')) {
+          getText().then(t => { if(t) _data.map = t; });
+        } else if (fname.endsWith('.schema.json') || fname.endsWith('.xsd')) {
+          getText().then(t => {
+            if (!t) return;
+            const isOut = /output|target|dest|[_-]out[._\-]/.test(fname);
+            if (isOut) _data.out = t; else _data.in = t;
+          });
+        }
+      }
+    } catch(_) {}
+    return result;
+  };
 
   function setBadge(key, hasContent){
     const badge = document.getElementById('dxm-' + key + '-badge');
@@ -682,6 +710,15 @@ _TOOLBAR_HTML = """
     el.className = 'dxm-fname' + (isEmpty ? ' empty' : '');
   }
 
+  function refreshBadges(){
+    setBadge('in',  !!_data.in);
+    setBadge('out', !!_data.out);
+    setBadge('map', !!_data.map);
+    setFname('in',  _data.in  ? 'Captured live' : 'Not found \u2014 upload above', !_data.in);
+    setFname('out', _data.out ? 'Captured live' : 'Not found \u2014 upload above', !_data.out);
+    setFname('map', _data.map ? 'Captured live' : 'Not captured yet \u2014 make a mapping first or upload', !_data.map);
+  }
+
   window.dxmReadFile = function(input, key, fnameId){
     const file = input.files[0];
     if(!file) return;
@@ -693,39 +730,25 @@ _TOOLBAR_HTML = """
   };
 
   async function dxmLoadSnapshot(){
-    // Reset badges to loading
-    ['in','out','map'].forEach(k => {
-      const b = document.getElementById('dxm-' + k + '-badge');
-      if(b){ b.textContent = 'checking\u2026'; b.className = 'badge badge-auto'; }
-      setFname(k, 'Checking workspace\u2026', true);
-    });
+    // Supplement live-captured data with workspace disk scan for anything missing
     try{
-      const r = await fetch('/api/workspace-snapshot');
+      const r = await _origFetch('/api/workspace-snapshot');
       if(!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
-      _data.in  = d.input_schema  || '';
-      _data.out = d.output_schema || '';
-      _data.map = d.map_content   || '';
-      setBadge('in',  !!_data.in);
-      setBadge('out', !!_data.out);
-      setBadge('map', !!_data.map);
-      setFname('in',  _data.in  ? 'Captured from workspace' : 'Not found \u2014 upload above', !_data.in);
-      setFname('out', _data.out ? 'Captured from workspace' : 'Not found \u2014 upload above', !_data.out);
-      setFname('map', _data.map ? 'Captured from workspace' : 'Not found \u2014 save in Kaoto (Ctrl+S) first or upload', !_data.map);
-    }catch(e){
-      ['in','out','map'].forEach(k => {
-        setBadge(k, false);
-        setFname(k, 'Could not read workspace \u2014 upload above', true);
-      });
-    }
+      if(!_data.in)  _data.in  = d.input_schema  || '';
+      if(!_data.out) _data.out = d.output_schema || '';
+      if(!_data.map) _data.map = d.map_content   || '';
+    }catch(_){}
+    refreshBadges();
   }
 
   window.dxmOpenSave = function(){
-    _data.in = ''; _data.out = ''; _data.map = '';
     document.getElementById('dxm-name').value = '';
     document.getElementById('dxm-msg').textContent = '';
     document.getElementById('dxm-modal-bg').classList.add('open');
     setTimeout(() => document.getElementById('dxm-name').focus(), 60);
+    // Show current live state immediately, then fill gaps from disk
+    refreshBadges();
     dxmLoadSnapshot();
   };
 
@@ -741,7 +764,7 @@ _TOOLBAR_HTML = """
     const btn = document.getElementById('dxm-save-btn');
     btn.disabled = true;
     try{
-      const res = await fetch('/api/maps',{
+      const res = await _origFetch('/api/maps',{
         method:'POST',
         headers:{'Content-Type':'application/json'},
         body: JSON.stringify({
@@ -762,20 +785,8 @@ _TOOLBAR_HTML = """
     }
   };
 
-  // ── Save XSLT to workspace (triggers Kaoto's own Ctrl+S handler) ──
-  window.dxmSaveToWorkspace = function(){
-    const btn = document.getElementById('dxm-save-ws-btn');
-    const orig = btn.textContent;
-    // Dispatch Ctrl+S into the Kaoto app iframe/document so it writes the XSLT
-    const ev = new KeyboardEvent('keydown', {
-      key: 's', code: 'KeyS', ctrlKey: true, metaKey: false,
-      bubbles: true, cancelable: true
-    });
-    document.dispatchEvent(ev);
-    btn.textContent = '\u2713 Saved!';
-    btn.disabled = true;
-    setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 1500);
-  };
+  // placeholder — button removed, no-op kept for safety
+  window.dxmSaveToWorkspace = function(){};
 
   document.getElementById('dxm-modal-bg').addEventListener('click', function(e){
     if(e.target===this) dxmClose();
