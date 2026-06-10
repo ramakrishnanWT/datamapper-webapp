@@ -1,5 +1,5 @@
 diff --git a/packages/ui/index.html b/packages/ui/index.html
-index e4c8ea0..90353c8 100644
+index 07a1665..ec361b4 100644
 --- a/packages/ui/index.html
 +++ b/packages/ui/index.html
 @@ -4,7 +4,7 @@
@@ -12,10 +12,10 @@ index e4c8ea0..90353c8 100644
    <body>
      <script type="module">
 diff --git a/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx b/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
-index 6353b96..0463981 100644
+index 7eee33b..5dbde6c 100644
 --- a/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
 +++ b/packages/ui/src/components/DataMapper/debug/MainMenuToolbarItem.tsx
-@@ -13,7 +13,7 @@ export const MainMenuToolbarItem: FunctionComponent = () => {
+@@ -21,7 +21,7 @@ export const MainMenuToolbarItem: FunctionComponent = () => {
        <Dropdown
          toggle={(toggleRef) => (
            <MenuToggle ref={toggleRef} id="main-menu-toggle" data-testid="dm-debug-main-menu-button" onClick={onToggle}>
@@ -48,7 +48,7 @@ index 7d1b8f4..d630f11 100644
            data-testid="enable-debug-mode-btn"
            isSelected={debug}
 diff --git a/packages/ui/src/layout/Shell.tsx b/packages/ui/src/layout/Shell.tsx
-index ec74c86..8e32ec1 100644
+index fd0b5e0..db4f35b 100644
 --- a/packages/ui/src/layout/Shell.tsx
 +++ b/packages/ui/src/layout/Shell.tsx
 @@ -8,6 +8,8 @@ import { LocalStorageKeys } from '../models';
@@ -59,7 +59,7 @@ index ec74c86..8e32ec1 100644
 +
  export const Shell: FunctionComponent<PropsWithChildren> = (props) => {
    const defaultNavState = useMemo(() => {
-     if (globalThis.window !== undefined) {
+     if (globalThis.innerWidth !== undefined) {
 @@ -23,6 +25,16 @@ export const Shell: FunctionComponent<PropsWithChildren> = (props) => {
      setIsNavOpen(!isNavOpen);
    }, [isNavOpen, setIsNavOpen]);
@@ -119,13 +119,14 @@ index 265c9fb..d1cd5bf 100644
            </MastheadBrand>
          </MastheadMain>
 diff --git a/packages/ui/src/router.tsx b/packages/ui/src/router.tsx
-index 776fd28..f2e577d 100644
+index 776fd28..4fe567c 100644
 --- a/packages/ui/src/router.tsx
 +++ b/packages/ui/src/router.tsx
-@@ -5,6 +5,16 @@ import { ErrorPage } from './pages/ErrorPage';
+@@ -5,6 +5,17 @@ import { ErrorPage } from './pages/ErrorPage';
  import { ReloadProvider } from './providers';
  import { Links } from './router/links.models';
  
++
 +const DATAMAPPER_ONLY = import.meta.env.VITE_DATAMAPPER_ONLY === 'true';
 +
 +const dataMapperDebuggerLazy = async () => {
@@ -139,7 +140,7 @@ index 776fd28..f2e577d 100644
  export const router = createHashRouter([
    {
      path: Links.Home,
-@@ -17,7 +27,7 @@ export const router = createHashRouter([
+@@ -17,7 +28,7 @@ export const router = createHashRouter([
      children: [
        {
          index: true,
@@ -148,7 +149,7 @@ index 776fd28..f2e577d 100644
        },
        {
          path: Links.SourceCode,
-@@ -53,13 +63,7 @@ export const router = createHashRouter([
+@@ -53,13 +64,7 @@ export const router = createHashRouter([
        },
        {
          path: Links.DataMapper,
