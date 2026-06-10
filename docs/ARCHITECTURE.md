@@ -11,16 +11,22 @@ graph TD
     subgraph Browser
         UI[Kaoto DataMapper SPA]
         LS[(localStorage)]
+        TB[Floating Toolbar]
         UI -- mapping state --> LS
+        TB -- Save Map / View Maps --> UI
     end
 
     subgraph Flask App  [Flask App — app.py]
         STATIC[Static file server\n.kaoto-src/packages/ui/dist]
         FILEAPI[File API\n/api/files/*]
         SAMPLEAPI[Sample API\n/api/samples/*]
+        MAPSAPI[Maps API\n/api/maps/*]
+        SNAPSHOT[Workspace Snapshot\n/api/workspace-snapshot]
+        MAPSPAGE[Saved Maps Page\n/maps]
         HEALTH[Health\n/api/health]
         SANDBOX[_safe_path sandbox]
         FILEAPI --> SANDBOX
+        SNAPSHOT --> SANDBOX
     end
 
     subgraph Host Filesystem
@@ -28,12 +34,20 @@ graph TD
         SAMPLES[sample/\nbundled samples]
     end
 
+    subgraph Persistence
+        DUCK[(DuckDB\nmaps.duckdb)]
+    end
+
     Browser -- HTTP GET / --> STATIC
     UI -- REST IMetadataApi --> FILEAPI
     UI -- REST copy sample --> SAMPLEAPI
+    TB -- POST /api/maps --> MAPSAPI
+    MAPSPAGE -- GET /api/maps --> MAPSAPI
+    SNAPSHOT --> WORKSPACE
     SANDBOX --> WORKSPACE
     SAMPLEAPI --> SAMPLES
     SAMPLEAPI --> WORKSPACE
+    MAPSAPI --> DUCK
 ```
 
 ---
@@ -53,12 +67,30 @@ graph TD
 ### 2.2 Flask Backend (`app.py`)
 
 Responsible for:
-- Serving the built SPA and its static assets.
+- Serving the built SPA and its static assets, injecting the floating toolbar HTML into the index page.
 - Implementing the sandboxed file API that the DataMapper uses as its `IMetadataApi`.
 - Providing the sample library (copy into workspace).
+- Exposing the Maps API backed by DuckDB.
+- Serving the standalone Saved Maps HTML page at `/maps`.
 - Exposing a `/api/health` liveness endpoint.
 
-### 2.3 Workspace Sandbox
+### 2.3 DuckDB Persistence Layer
+
+The `maps` table is auto-created on first startup inside the file at `MAPS_DB` (default: `./maps.duckdb` locally, `/app/data/maps.duckdb` in Docker).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | INTEGER PK | Auto-incremented via `MAX(id)+1` |
+| `name` | VARCHAR | User-supplied label |
+| `input_schema` | VARCHAR | JSON Schema or XSD text |
+| `output_schema` | VARCHAR | JSON Schema or XSD text |
+| `map_content` | VARCHAR | XSLT or DMF file text |
+| `created_at` | TIMESTAMP | Set on insert |
+| `updated_at` | TIMESTAMP | Set on insert (reserved for future update support) |
+
+A `threading.Lock` serialises all DuckDB access within the single Gunicorn worker process.
+
+### 2.4 Workspace Sandbox
 
 All file I/O from the frontend is resolved under `WORKSPACE_DIR` (`./workspace` by default). The `_safe_path()` function:
 1. Rejects empty, absolute, or `..`-containing paths (HTTP 400).
@@ -115,7 +147,8 @@ localhost:5000
   └── python scripts/run_app.py
         └── app.py (Flask)
               ├── serves .kaoto-src/packages/ui/dist/
-              └── sandboxed I/O → ./workspace/
+              ├── sandboxed I/O → ./workspace/
+              └── DuckDB → ./maps.duckdb
 ```
 
 ### 4.2 Docker (single container)
@@ -138,9 +171,14 @@ services:
   dxm:
     image: data-exchange-mapper:latest
     ports:
-      - "${DXM_PORT:-5000}:5000"
+      - "${DXM_PORT:-8080}:5000"
+    environment:
+      MAPS_DB: /app/data/maps.duckdb
     volumes:
-      - ./workspace:/app/workspace   # persist workspace between runs
+      - maps_data:/app/data        # named volume — persists maps.duckdb
+      - ./workspace:/app/workspace # bind-mount — persists schema/xsl files
+volumes:
+  maps_data:
 ```
 
 ---
@@ -152,9 +190,10 @@ services:
 | `WORKSPACE_DIR` | `./workspace` | Absolute path to the sandboxed file workspace |
 | `FRONTEND_DIST` | `.kaoto-src/packages/ui/dist` | Path to the built Kaoto SPA |
 | `FLASK_PORT` | `5000` | Port Flask listens on |
-| `DXM_PORT` | `5000` | Host port mapped by Docker / Compose |
+| `DXM_PORT` | `8080` | Host port mapped by Docker / Compose |
 | `DXM_REF` | `main` | Kaoto git ref to clone (tag or SHA recommended) |
 | `DXM_BUILD_CONTEXT` | `.` | Docker build context |
+| `MAPS_DB` | `./maps.duckdb` (local) / `/app/data/maps.duckdb` (Docker) | Path to the DuckDB file storing saved maps |
 
 ---
 
@@ -166,15 +205,24 @@ The project does not maintain its own React codebase. It patches and builds the 
 
 **Trade-off:** Upstream Kaoto changes may break the patch (`scripts/kaoto.patch`). A CI job that re-applies the patch against the pinned ref mitigates this.
 
-### 6.2 Stateless Flask backend
+### 6.2 DuckDB for Map Persistence
 
-All mapping state lives in the browser's `localStorage`. The Flask backend is entirely stateless (no database, no session store). This simplifies horizontal scaling and local development but means state is lost when the browser data is cleared.
+Saved maps (input schema, output schema, XSLT/DMF content) are stored in a local DuckDB file. DuckDB was chosen because:
+- Zero-dependency embedded DB (single pip package, no server process).
+- Full SQL with rich type support.
+- Single-file persistence that maps cleanly to a Docker named volume.
 
-### 6.3 Sandboxed file API
+**Trade-off:** DuckDB does not support concurrent multi-process writers. This is mitigated by running a single Gunicorn worker plus an in-process `threading.Lock`.
+
+### 6.3 Stateless Flask backend (file API)
+
+All mapping state lives in the browser's `localStorage`. The Flask backend is stateless with respect to the file API (no session store). Saved maps are the one exception — they are persisted server-side in DuckDB via the Maps API.
+
+### 6.4 Sandboxed file API
 
 Rather than a generic file proxy, the API enforces a strict sandbox boundary. This is a deliberate security trade-off: the file API is safe for local use but should be protected by auth before any shared/cloud deployment.
 
-### 6.4 XSLT 3.0 output
+### 6.5 XSLT 3.0 output
 
 Generated XSLT targets XSLT 3.0 (Saxon), which supports JSON input natively. This enables JSON-to-XML transformation at runtime without pre-conversion steps, aligning with Apache Camel's Saxon processor.
 
@@ -188,5 +236,7 @@ Generated XSLT targets XSLT 3.0 (Saxon), which supports JSON input natively. Thi
 | Patch drift CI check | Alert when `kaoto.patch` fails to apply to the pinned ref |
 | Token-based file API auth | Required before any shared/multi-user deployment |
 | Request size limits on `PUT /api/files` | Prevent abuse in shared deployments |
+| Map versioning / diff | Track history of changes to a named map |
+| Maps API auth | Protect saved maps in shared deployments |
 
-See [PLAN.md](PLAN.md) for the full backlog.
+See [PLAN.md](../PLAN.md) for the full backlog.

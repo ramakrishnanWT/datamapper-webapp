@@ -39,7 +39,8 @@ DXM is a browser-based visual data mapping and XSLT generation tool. It exposes 
 ### 3.2 Backend — File API
 
 | ID | Requirement |
-|---|---|
+|---|
+---|
 | B-01 | `GET /api/files` — list all files in the sandboxed workspace. |
 | B-02 | `GET /api/files/<path>` — read a file from the workspace (raw bytes). |
 | B-03 | `PUT /api/files/<path>` — create or overwrite a file in the workspace. |
@@ -50,14 +51,32 @@ DXM is a browser-based visual data mapping and XSLT generation tool. It exposes 
 | B-08 | `POST /api/samples/<name>/copy` — copy a named sample into the workspace. |
 | B-09 | `GET /api/health` — liveness check, returns `{"status": "ok"}`. |
 
-### 3.3 Build & Setup
+### 3.3 Backend — Saved Maps API (DuckDB)
+
+| ID | Requirement |
+|---|---|
+| M-01 | `GET /api/maps` — return a list of all saved maps (id, name, created_at, updated_at). |
+| M-02 | `POST /api/maps` — save a new map; body: `{ name, input_schema, output_schema, map_content }`. Name is required; returns 201 with `{ id, name }`. |
+| M-03 | `GET /api/maps/<id>` — return all fields for one saved map. |
+| M-04 | `DELETE /api/maps/<id>` — delete a saved map; returns 204. |
+| M-05 | Maps shall be stored in a DuckDB file (`maps.duckdb`) whose path is controlled by the `MAPS_DB` environment variable. |
+| M-06 | The `maps` table shall store: `id` (integer PK), `name` (varchar), `input_schema` (varchar), `output_schema` (varchar), `map_content` (varchar), `created_at` / `updated_at` (timestamp). |
+| M-07 | Input and output schemas shall accept both JSON Schema (`.json`) and XML Schema (`.xsd`) content. |
+| M-08 | `GET /api/workspace-snapshot` — scan the workspace and return current files bucketed by type (`input_schema`, `output_schema`, `map_content`) to pre-fill the save dialog. |
+| M-09 | `GET /maps` — serve a standalone HTML page listing all saved maps with View and Delete actions. |
+| M-10 | The Kaoto SPA page (`/`) shall include a floating toolbar with a **Save Map** button and a link to the Saved Maps page. |
+| M-11 | The Save Map dialog shall support file upload (client-side `FileReader`) for all three fields in addition to paste. |
+| M-12 | The Save Map dialog shall auto-populate fields from the workspace snapshot on open. |
+
+### 3.4 Build & Setup
 
 | ID | Requirement |
 |---|---|
 | S-01 | `scripts/setup_kaoto.py` shall clone Kaoto from source, apply `scripts/kaoto.patch`, and produce the built frontend at `.kaoto-src/packages/ui/dist/`. |
 | S-02 | `scripts/run_app.py` shall start the Flask server on `FLASK_PORT` (default 5000). |
 | S-03 | A Docker multi-stage `Dockerfile` shall produce a self-contained image tagged `data-exchange-mapper:latest`. |
-| S-04 | `docker-compose.yml` shall expose the app on `DXM_PORT` (default 5000). |
+| S-04 | `docker-compose.yml` shall expose the app on `DXM_PORT` (default 8080) and persist the DuckDB maps store in a named Docker volume (`maps_data`). |
+| S-05 | The Docker deployment shall run a single Gunicorn worker to avoid multi-process DuckDB file conflicts. |
 
 ---
 
@@ -70,6 +89,8 @@ DXM is a browser-based visual data mapping and XSLT generation tool. It exposes 
 | NF-03 | The Docker image build shall complete in under 10 minutes on a standard CI runner. |
 | NF-04 | The backend test suite shall complete in under 30 seconds. |
 | NF-05 | No secrets or credentials shall be baked into the Docker image. |
+| NF-06 | Saved maps shall survive container restarts (persisted in a named Docker volume). |
+| NF-07 | The DuckDB store shall not be corrupted by concurrent requests (single-worker + threading lock). |
 
 ---
 
@@ -88,3 +109,4 @@ DXM is a browser-based visual data mapping and XSLT generation tool. It exposes 
 - Server-side XSLT execution / testing
 - Live collaboration / shared workspaces
 - Support for EDI or flat-file schemas
+- Map versioning / diff history
